@@ -148,8 +148,16 @@ nextjs_space/
 Required variables in `.env`:
 
 ```env
-# Database
+# Database - Use connection pooler for serverless (Vercel)
+# For Supabase: Use the "Connection Pooling" connection string from Supabase dashboard
+# Format: postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true
 DATABASE_URL="postgresql://..."
+# Optional: Direct connection URL for migrations (only needed for local development)
+DIRECT_URL="postgresql://..."
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL="https://[project-ref].supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
 
 # NextAuth
 NEXTAUTH_URL="http://localhost:3000"

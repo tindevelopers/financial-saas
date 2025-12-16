@@ -21,6 +21,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check if using direct connection instead of pooler (common mistake)
+    const dbUrl = process.env.DATABASE_URL
+    if (dbUrl.includes(':5432') && !dbUrl.includes('pooler') && !dbUrl.includes('pgbouncer')) {
+      console.error('DATABASE_URL appears to be using direct connection instead of connection pooler')
+      console.error('For Vercel/serverless, use Supabase Connection Pooling URL (port 6543)')
+      return NextResponse.json(
+        { 
+          error: 'Database configuration error: Please use Supabase Connection Pooling URL for serverless environments. See SUPABASE_CONNECTION_SETUP.md for details.',
+          hint: 'Use the connection string from Supabase Dashboard → Settings → Database → Connection Pooling (port 6543)'
+        },
+        { status: 500 }
+      )
+    }
+
     const body = await request.json()
     const { email, password, name } = body
 
