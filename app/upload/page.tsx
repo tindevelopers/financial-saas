@@ -86,6 +86,7 @@ export default function UploadPage() {
 
       const uploadResponse = await fetch("/api/upload/complete", {
         method: "POST",
+        credentials: "include", // Include cookies for authentication
         body: formData,
       })
 
@@ -105,6 +106,7 @@ export default function UploadPage() {
       // Start AI categorization
       const categorizeResponse = await fetch("/api/categorize", {
         method: "POST",
+        credentials: "include", // Include cookies for authentication
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ uploadId: uploadData.uploadId }),
       })

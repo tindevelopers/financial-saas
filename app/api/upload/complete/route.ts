@@ -10,7 +10,11 @@ export async function POST(request: NextRequest) {
   try {
     const { error, user } = await requireAuth()
     if (error) {
-      console.error('Upload auth error: Unauthorized')
+      console.error('Upload auth error: Unauthorized', {
+        hasError: !!error,
+        hasUser: !!user,
+        cookies: request.cookies.getAll().map(c => c.name),
+      })
       return error
     }
     

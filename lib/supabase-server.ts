@@ -40,7 +40,13 @@ export async function getCurrentUser() {
     error,
   } = await supabase.auth.getUser()
 
-  if (error || !user) {
+  if (error) {
+    console.error('getCurrentUser error:', error.message)
+    return null
+  }
+
+  if (!user) {
+    console.error('getCurrentUser: No user found in session')
     return null
   }
 
@@ -50,7 +56,10 @@ export async function getCurrentUser() {
 // Get current user with tenant info
 export async function getCurrentUserWithTenant() {
   const user = await getCurrentUser()
-  if (!user) return null
+  if (!user) {
+    console.error('getCurrentUserWithTenant: No user from getCurrentUser')
+    return null
+  }
 
   const { prisma } = await import('./db')
   const userProfile = await prisma.user.findUnique({
@@ -58,7 +67,15 @@ export async function getCurrentUserWithTenant() {
     include: { tenant: true },
   })
 
-  if (!userProfile) return null
+  if (!userProfile) {
+    console.error('getCurrentUserWithTenant: No user profile found for user:', user.id)
+    return null
+  }
+
+  if (!userProfile.tenantId) {
+    console.error('getCurrentUserWithTenant: User profile has no tenantId:', user.id)
+    return null
+  }
 
   return {
     ...user,
