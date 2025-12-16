@@ -18,10 +18,19 @@ You **MUST** use Supabase's **Connection Pooling** connection string, not the di
 
 1. Go to your Supabase project dashboard
 2. Navigate to **Settings** → **Database**
-3. Scroll down to **Connection Pooling**
-4. Copy the **Connection string** under **Transaction mode** (recommended for Prisma)
+3. Scroll down to find the **"Connection string"** section (this is different from "Connection pooling configuration")
+4. In the Connection string section:
+   - Make sure **"Use connection pooling"** checkbox is checked/enabled
+   - You'll see multiple connection strings for different modes
+   - Look for the one labeled **"Transaction mode"** (recommended for Prisma)
+   - Copy that connection string
    - It should look like: `postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?pgbouncer=true`
    - Notice the port is **6543** (not 5432) and includes `?pgbouncer=true`
+
+**Note:** If you don't see "Transaction mode", look for connection strings that:
+- Use port **6543** (not 5432)
+- Include `pooler.supabase.com` in the hostname
+- Include `?pgbouncer=true` parameter
 
 ### Setting in Vercel
 
