@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
         data: {
           name: name || email.split('@')[0],
         },
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://financial-saas-ecru.vercel.app'}/auth/signin`,
       },
     })
 
@@ -122,10 +123,15 @@ export async function POST(request: NextRequest) {
         })
       }
 
+      // Check if email confirmation is required
+      const requiresConfirmation = authData.user && !authData.session
+      
       return NextResponse.json(
         {
           message: 'User created successfully',
           user: { id: user.id, email: user.email, fullName: user.fullName },
+          requiresEmailConfirmation: requiresConfirmation,
+          session: authData.session, // Include session if available (no email confirmation required)
         },
         { status: 201 }
       )

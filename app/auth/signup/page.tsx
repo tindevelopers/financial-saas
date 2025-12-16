@@ -40,7 +40,20 @@ export default function SignUpPage() {
         return
       }
 
-      // Auto sign-in after successful signup
+      // If session is returned, user is already signed in (no email confirmation required)
+      if (data.session) {
+        router.push("/dashboard")
+        router.refresh()
+        return
+      }
+
+      // If email confirmation is required, show message
+      if (data.requiresEmailConfirmation) {
+        setError("Account created! Please check your email to confirm your account before signing in.")
+        return
+      }
+
+      // Otherwise, try to sign in
       const supabase = createSupabaseClient()
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -48,7 +61,12 @@ export default function SignUpPage() {
       })
 
       if (signInError) {
-        setError("Account created but sign-in failed. Please try signing in.")
+        // More helpful error message
+        if (signInError.message?.includes('Email not confirmed')) {
+          setError("Account created! Please check your email to confirm your account.")
+        } else {
+          setError("Account created! You can now sign in with your credentials.")
+        }
       } else {
         router.push("/dashboard")
         router.refresh()
