@@ -1,11 +1,13 @@
 "use client"
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Singleton instance to prevent multiple GoTrueClient instances
 let supabaseClient: SupabaseClient | null = null
 
 // Client-side Supabase client (for use in client components)
+// Uses @supabase/ssr to ensure cookies are synced with server
 export function createSupabaseClient(): SupabaseClient {
   if (typeof window === 'undefined') {
     throw new Error('createSupabaseClient can only be used in client components')
@@ -23,14 +25,9 @@ export function createSupabaseClient(): SupabaseClient {
     throw new Error('Missing Supabase environment variables')
   }
 
-  // Create and cache the client
-  supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  })
+  // Use createBrowserClient from @supabase/ssr to ensure cookies are synced
+  // This ensures the session is available to both client and server
+  supabaseClient = createBrowserClient(supabaseUrl, supabaseAnonKey)
 
   return supabaseClient
 }
