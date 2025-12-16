@@ -71,25 +71,18 @@ async function main() {
       const tenant = await prisma.tenant.create({
         data: {
           name: 'Test Company Ltd',
+          domain: 'test-company.example.com',
+          plan: 'free',
+          region: 'us-east-1',
+          status: 'active',
         },
       })
       
       console.log(`Created tenant: ${tenant.name}`)
       
-      // Create test user (will be replaced by actual signup)
-      const bcrypt = await import('bcryptjs')
-      const hashedPassword = await bcrypt.hash('johndoe123', 10)
-      
-      const user = await prisma.user.create({
-        data: {
-          email: 'john@doe.com',
-          name: 'John Doe',
-          password: hashedPassword,
-          tenantId: tenant.id,
-        },
-      })
-      
-      console.log(`Created user: ${user.email}`)
+      // Note: User creation is now handled by Supabase Auth
+      // This seed script is kept for reference but users should be created via signup
+      console.log('Note: Users are now created via Supabase Auth. Use the signup endpoint to create users.')
       
       // Create default UK categories for this tenant
       for (const categoryData of UK_CATEGORIES) {

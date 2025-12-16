@@ -1,19 +1,14 @@
-const path = require('path');
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  distDir: process.env.NEXT_DIST_DIR || '.next',
-  output: process.env.NEXT_OUTPUT_MODE,
+  // Disable static optimization - all pages are dynamic
+  output: 'standalone',
   experimental: {
-    outputFileTracingRoot: path.join(__dirname, '../'),
+    outputFileTracingRoot: require('path').join(__dirname),
   },
-  eslint: {
-    ignoreDuringBuilds: true,
+  // Skip static generation for these routes
+  generateBuildId: async () => {
+    return 'build-' + Date.now()
   },
-  typescript: {
-    ignoreBuildErrors: false,
-  },
-  images: { unoptimized: true },
-};
+}
 
-module.exports = nextConfig;
+module.exports = nextConfig
