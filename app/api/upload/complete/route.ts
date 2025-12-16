@@ -9,7 +9,14 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: NextRequest) {
   try {
     const { error, user } = await requireAuth()
-    if (error) return error
+    if (error) {
+      console.error('Upload auth error:', { 
+        hasUser: !!user, 
+        tenantId: user?.tenantId,
+        userId: user?.id 
+      })
+      return error
+    }
     
     const tenantId = user!.tenantId!
     
