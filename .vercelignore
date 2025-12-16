@@ -1,0 +1,49 @@
+# Dependencies
+node_modules
+.yarn/cache
+.yarn/install-state.gz
+
+# Build outputs
+.next
+.build
+out
+dist
+build
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage
+.nyc_output
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Prisma
+migrations
+
+# Documentation (already in repo)
+*.md
+!README.md
+
+# Git
+.git
+.gitignore
