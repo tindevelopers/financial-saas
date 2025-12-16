@@ -9,9 +9,16 @@ export function useSupabaseAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
-  const supabase = createSupabaseClient()
 
   useEffect(() => {
+    // Only create client in browser
+    if (typeof window === 'undefined') {
+      setLoading(false)
+      return
+    }
+
+    const supabase = createSupabaseClient()
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
@@ -30,6 +37,8 @@ export function useSupabaseAuth() {
   }, [])
 
   const signOut = async () => {
+    if (typeof window === 'undefined') return
+    const supabase = createSupabaseClient()
     await supabase.auth.signOut()
     router.push("/auth/signin")
     router.refresh()
