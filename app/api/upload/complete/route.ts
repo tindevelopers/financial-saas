@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const { error, user } = await requireAuth()
     if (error) return error
     
-    const tenantId = user!.tenantId
+    const tenantId = user!.tenantId!
     
     const formData = await request.formData()
     const file = formData.get('file') as File

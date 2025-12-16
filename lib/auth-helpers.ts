@@ -12,9 +12,13 @@ export async function requireAuth() {
     }
   }
   
+  // TypeScript now knows tenantId is not null
   return {
     error: null,
-    user,
+    user: {
+      ...user,
+      tenantId: user.tenantId, // This ensures TypeScript knows it's not null
+    },
   }
 }
 

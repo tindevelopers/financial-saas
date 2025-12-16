@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const { error, user } = await requireAuth()
     if (error) return error
     
-    const tenantId = user!.tenantId
+    const tenantId = user!.tenantId!
     const body = await request.json()
     const { name, type, description } = body
     
