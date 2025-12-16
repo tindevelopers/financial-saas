@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-options'
+import { getCurrentUserWithTenant } from '@/lib/supabase-server'
 import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await getCurrentUserWithTenant()
     
-    if (!session?.user) {
+    if (!user || !user.tenantId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
-    const tenantId = (session.user as any).tenantId
+    const tenantId = user.tenantId
     const { searchParams } = new URL(request.url)
     
     const page = parseInt(searchParams.get('page') || '1')
@@ -61,13 +60,13 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const user = await getCurrentUserWithTenant()
     
-    if (!session?.user) {
+    if (!user || !user.tenantId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
-    const tenantId = (session.user as any).tenantId
+    const tenantId = user.tenantId
     const body = await request.json()
     const { transactionId, categoryId, isReviewed } = body
     

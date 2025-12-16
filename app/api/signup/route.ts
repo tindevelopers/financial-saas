@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { prisma } from '@/lib/db'
-import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,35 +14,52 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    // Create user in Supabase Auth
+    const supabase = await createServerSupabaseClient()
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: name || email.split('@')[0],
+        },
+      },
     })
 
-    if (existingUser) {
+    if (authError || !authData.user) {
       return NextResponse.json(
-        { error: 'User already exists' },
+        { error: authError?.message || 'Failed to create user' },
         { status: 400 }
       )
     }
 
     // Create tenant for this user (1 user = 1 tenant)
+    const domain = email.split('@')[1] || 'example.com'
     const tenant = await prisma.tenant.create({
       data: {
         name: name || email.split('@')[0] + "'s Company",
+        domain: `${email.split('@')[0]}.${domain}`,
+        status: 'active',
+        plan: 'free',
+        region: 'us-east-1',
       },
     })
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10)
+    // Get default role (Viewer or assign based on first user)
+    const defaultRole = await prisma.role.findFirst({
+      where: { name: 'Viewer' },
+    })
 
-    // Create user
+    // Create user profile in public schema
     const user = await prisma.user.create({
       data: {
+        id: authData.user.id,
         email,
-        password: hashedPassword,
-        name: name || email.split('@')[0],
+        fullName: name || email.split('@')[0],
         tenantId: tenant.id,
+        roleId: defaultRole?.id,
+        plan: 'free',
+        status: 'active',
       },
     })
 
@@ -80,7 +97,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         message: 'User created successfully',
-        user: { id: user.id, email: user.email, name: user.name },
+        user: { id: user.id, email: user.email, fullName: user.fullName },
       },
       { status: 201 }
     )

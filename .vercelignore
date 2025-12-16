@@ -38,7 +38,7 @@ Thumbs.db
 *~
 
 # Prisma
-migrations
+# migrations - commented out to allow migrations to be deployed
 
 # Documentation (already in repo)
 *.md

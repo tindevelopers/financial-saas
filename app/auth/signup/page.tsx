@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { createSupabaseClient } from "@/lib/supabase-client"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -24,6 +24,7 @@ export default function SignUpPage() {
     setLoading(true)
 
     try {
+      // Create account via API (which handles Supabase Auth + user profile creation)
       const response = await fetch("/api/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -38,13 +39,13 @@ export default function SignUpPage() {
       }
 
       // Auto sign-in after successful signup
-      const signInResult = await signIn("credentials", {
+      const supabase = createSupabaseClient()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
-        redirect: false,
       })
 
-      if (signInResult?.error) {
+      if (signInError) {
         setError("Account created but sign-in failed. Please try signing in.")
       } else {
         router.push("/dashboard")

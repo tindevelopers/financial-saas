@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { LayoutDashboard, Upload, FileText, LogOut, Settings } from "lucide-react"
-import { signOut, useSession } from "next-auth/react"
+import { useSupabaseAuth } from "@/hooks/use-supabase-auth"
 import { Button } from "@/components/ui/button"
 
 const navigation = [
@@ -15,7 +15,7 @@ const navigation = [
 
 export function DashboardNav() {
   const pathname = usePathname()
-  const { data: session } = useSession() || {}
+  const { user, signOut } = useSupabaseAuth()
 
   return (
     <div className="flex h-full flex-col gap-2">
@@ -54,12 +54,12 @@ export function DashboardNav() {
             Signed in as
           </div>
           <div className="text-sm font-medium truncate">
-            {session?.user?.email || "User"}
+            {user?.email || "User"}
           </div>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => signOut({ callbackUrl: "/" })}
+            onClick={signOut}
             className="w-full mt-2"
           >
             <LogOut className="h-4 w-4 mr-2" />

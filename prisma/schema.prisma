@@ -1,7 +1,6 @@
 generator client {
-    provider = "prisma-client-js"
-    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
-    output = "/home/ubuntu/financial_categorization_saas/nextjs_space/node_modules/.prisma/client"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
 }
 
 datasource db {
@@ -10,109 +9,104 @@ datasource db {
 }
 
 // ========================================
-// USER & AUTHENTICATION
+// USER & TENANT MANAGEMENT (SaaS Base Structure)
 // ========================================
 
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String
-  
-  // Each user is their own tenant
-  tenantId      String    @unique
-  
-  accounts      Account[]
-  sessions      Session[]
-  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  @@map("users")
+model Role {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique
+  description  String
+  coverage     String // 'Global', 'Regional', 'Per tenant', etc.
+  maxSeats     Int      @default(0) @map("max_seats")
+  currentSeats Int      @default(0) @map("current_seats")
+  permissions  String[] @default([])
+  gradient     String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  users           User[]
+  workspaceUsers  WorkspaceUser[]
+  userTenantRoles UserTenantRole[]
+
+  @@map("roles")
 }
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("sessions")
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-  @@map("verification_tokens")
-}
-
-// ========================================
-// TENANT MANAGEMENT (1 user = 1 tenant)
-// ========================================
 
 model Tenant {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid()) @db.Uuid
   name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  users                      User[]
-  categories                 Category[]
-  transactions               Transaction[]
-  uploads                    Upload[]
-  userCorrections            UserCorrection[]
-  googleSheetsConnections    GoogleSheetsConnection[]
-  
+  domain    String   @unique
+  status    String   @default("pending") // 'active', 'pending', 'suspended'
+  plan      String
+  region    String
+  avatarUrl String?  @map("avatar_url")
+  features  String[] @default([])
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users                   User[]
+  categories              Category[]
+  googleSheetsConnections GoogleSheetsConnection?
+  transactions            Transaction[]
+  uploads                 Upload[]
+  userCorrections         UserCorrection[]
+  auditLogs               AuditLog[]
+  workspaces              Workspace[]
+  stripeCustomers         StripeCustomer[]
+  userTenantRoles         UserTenantRole[]
+  stripeSubscriptions     StripeSubscription[]
+  stripePaymentMethods    StripePaymentMethod[]
+
+  @@index([status])
+  @@index([domain])
   @@map("tenants")
 }
 
+// User profile in public schema - extends Supabase auth.users
+model User {
+  id           String    @id @db.Uuid // References auth.users.id (UUID from Supabase)
+  email        String    @unique
+  fullName     String    @map("full_name")
+  avatarUrl    String?   @map("avatar_url")
+  roleId       String?   @map("role_id") @db.Uuid
+  tenantId     String?   @map("tenant_id") @db.Uuid
+  plan         String
+  status       String    @default("pending") // 'active', 'pending', 'suspended'
+  lastActiveAt DateTime? @map("last_active_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  role            Role?            @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  tenant          Tenant?          @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  userTenantRoles UserTenantRole[]
+  workspaceUsers  WorkspaceUser[]
+
+  @@index([tenantId])
+  @@index([roleId])
+  @@index([email])
+  @@index([status])
+  @@map("users")
+}
+
 // ========================================
-// UK ACCOUNTING CATEGORIES
+// CATEGORIES
 // ========================================
 
 model Category {
-  id          String   @id @default(cuid())
-  tenantId    String
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
   name        String
-  type        String   // 'income' or 'expense'
+  type        String // 'income' or 'expense'
   description String?
-  isDefault   Boolean  @default(false) // System-provided categories
-  isActive    Boolean  @default(true)
-  
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
-  corrections  UserCorrection[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+  isDefault   Boolean  @default(false) @map("is_default")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant               Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactions         Transaction[]
+  originalCorrections  UserCorrection[] @relation("OriginalCategory")
+  correctedCorrections UserCorrection[] @relation("CorrectedCategory")
+
   @@index([tenantId])
   @@index([tenantId, type])
   @@map("categories")
@@ -123,23 +117,22 @@ model Category {
 // ========================================
 
 model Upload {
-  id                  String   @id @default(cuid())
-  tenantId            String
-  filename            String
-  originalFilename    String
-  cloudStoragePath    String   // S3 key
-  fileSize            Int
-  rowCount            Int?
-  processedCount      Int      @default(0)
-  status              String   @default("pending") // pending, processing, completed, failed
-  errorMessage        String?  @db.Text
-  
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  filename         String
+  originalFilename String   @map("original_filename")
+  cloudStoragePath String   @map("cloud_storage_path")
+  fileSize         Int      @map("file_size")
+  rowCount         Int?     @map("row_count")
+  processedCount   Int      @default(0) @map("processed_count")
+  status           String   @default("pending") // pending, processing, completed, failed
+  errorMessage     String?  @map("error_message") @db.Text
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
   tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   transactions Transaction[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+
   @@index([tenantId])
   @@index([tenantId, status])
   @@map("uploads")
@@ -150,46 +143,46 @@ model Upload {
 // ========================================
 
 model Transaction {
-  id                      String   @id @default(cuid())
-  tenantId                String
-  uploadId                String
-  
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  uploadId String @map("upload_id") @db.Uuid
+
   // Transaction details
-  date                    DateTime
-  description             String   @db.Text
-  payerPayee              String?
-  reference               String?
-  paidIn                  Decimal? @db.Decimal(15, 2)
-  paidOut                 Decimal? @db.Decimal(15, 2)
-  amount                  Decimal  @db.Decimal(15, 2) // Signed amount (positive = income, negative = expense)
-  currency                String   @default("GBP")
-  
+  date        DateTime
+  description String   @db.Text
+  payerPayee  String?  @map("payer_payee")
+  reference   String?
+  paidIn      Decimal? @map("paid_in") @db.Decimal(15, 2)
+  paidOut     Decimal? @map("paid_out") @db.Decimal(15, 2)
+  amount      Decimal  @db.Decimal(15, 2) // Signed amount
+  currency    String   @default("GBP")
+
   // Categorization
-  categoryId              String?
-  confidence              Decimal? @db.Decimal(3, 2) // 0.00 to 1.00
-  aiSuggestedCategoryId   String?
-  aiReasoning             String?  @db.Text
-  status                  String   @default("pending") // pending, categorized, reviewed, confirmed
-  
+  categoryId            String?  @map("category_id") @db.Uuid
+  confidence            Decimal? @db.Decimal(3, 2) // 0.00 to 1.00
+  aiSuggestedCategoryId String?  @map("ai_suggested_category_id")
+  aiReasoning           String?  @map("ai_reasoning") @db.Text
+  status                String   @default("pending") // pending, categorized, reviewed, confirmed
+
   // Manual review flags
-  needsReview             Boolean  @default(false)
-  isReviewed              Boolean  @default(false)
-  reviewedAt              DateTime?
-  
+  needsReview Boolean   @default(false) @map("needs_review")
+  isReviewed  Boolean   @default(false) @map("is_reviewed")
+  reviewedAt  DateTime? @map("reviewed_at")
+
   // Metadata from CSV
-  originalCategory        String?
-  originalSubCategory     String?
-  transactionType         String?
-  metadata                Json?    @db.JsonB
-  
-  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  upload      Upload           @relation(fields: [uploadId], references: [id], onDelete: Cascade)
-  category    Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  corrections UserCorrection[]
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+  originalCategory    String? @map("original_category")
+  originalSubCategory String? @map("original_sub_category")
+  transactionType     String? @map("transaction_type")
+  metadata            Json?   @db.JsonB
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  upload          Upload           @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  category        Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  userCorrections UserCorrection[]
+
   @@index([tenantId])
   @@index([tenantId, date])
   @@index([tenantId, status])
@@ -203,24 +196,25 @@ model Transaction {
 // ========================================
 
 model UserCorrection {
-  id                    String   @id @default(cuid())
-  tenantId              String
-  transactionId         String
-  
-  originalCategoryId    String?
-  correctedCategoryId   String
-  reason                String?  @db.Text
-  
+  id            String @id @default(uuid()) @db.Uuid
+  tenantId      String @map("tenant_id") @db.Uuid
+  transactionId String @map("transaction_id") @db.Uuid
+
+  originalCategoryId  String? @map("original_category_id") @db.Uuid
+  correctedCategoryId String  @map("corrected_category_id") @db.Uuid
+  reason              String? @db.Text
+
   // Pattern learning
-  transactionPattern    String?  // E.g., vendor name pattern
-  amountPattern         String?  // E.g., amount range
-  
+  transactionPattern String? @map("transaction_pattern")
+  amountPattern      String? @map("amount_pattern")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
   tenant            Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   transaction       Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
-  correctedCategory Category    @relation(fields: [correctedCategoryId], references: [id], onDelete: Cascade)
-  
-  createdAt DateTime @default(now())
-  
+  originalCategory  Category?   @relation("OriginalCategory", fields: [originalCategoryId], references: [id], onDelete: SetNull)
+  correctedCategory Category    @relation("CorrectedCategory", fields: [correctedCategoryId], references: [id], onDelete: Cascade)
+
   @@index([tenantId])
   @@index([tenantId, correctedCategoryId])
   @@map("user_corrections")
@@ -231,23 +225,188 @@ model UserCorrection {
 // ========================================
 
 model GoogleSheetsConnection {
-  id                    String   @id @default(cuid())
-  tenantId              String
-  
-  // OAuth tokens (store encrypted in production)
-  accessToken           String   @db.Text
-  refreshToken          String?  @db.Text
-  expiresAt             DateTime?
-  
-  // User preferences
-  defaultSpreadsheetId  String?
-  autoSync              Boolean  @default(false)
-  
+  id                   String    @id @default(uuid()) @db.Uuid
+  tenantId             String    @unique @map("tenant_id") @db.Uuid
+  accessToken          String    @map("access_token") @db.Text
+  refreshToken         String?   @map("refresh_token") @db.Text
+  expiresAt            DateTime? @map("expires_at")
+  defaultSpreadsheetId String?   @map("default_spreadsheet_id")
+  autoSync             Boolean   @default(false) @map("auto_sync")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  @@unique([tenantId])
+
   @@map("google_sheets_connections")
+}
+
+// ========================================
+// AUDIT LOGS (SaaS Base)
+// ========================================
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid // References auth.users.id
+  tenantId   String?  @map("tenant_id") @db.Uuid
+  action     String
+  resource   String
+  permission String
+  allowed    Boolean  @default(false)
+  reason     String?
+  metadata   Json?    @db.JsonB
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([action])
+  @@index([resource])
+  @@index([permission])
+  @@index([allowed])
+  @@index([createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+
+// ========================================
+// WORKSPACES (SaaS Base)
+// ========================================
+
+model Workspace {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  name        String
+  slug        String
+  description String?
+  avatarUrl   String?  @map("avatar_url")
+  settings    Json?    @db.JsonB
+  status      String   @default("active") // 'active', 'suspended', 'archived'
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workspaceUsers WorkspaceUser[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([slug])
+  @@index([status])
+  @@map("workspaces")
+}
+
+model WorkspaceUser {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  roleId      String?  @map("role_id") @db.Uuid
+  permissions String[] @default([])
+  joinedAt    DateTime @default(now()) @map("joined_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  role      Role?     @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("workspace_users")
+}
+
+model UserTenantRole {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  roleId    String   @map("role_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId, roleId])
+  @@index([userId])
+  @@index([tenantId])
+  @@index([roleId])
+  @@map("user_tenant_roles")
+}
+
+// ========================================
+// STRIPE BILLING (SaaS Base)
+// ========================================
+
+model StripeCustomer {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  userId           String?  @map("user_id") @db.Uuid
+  stripeCustomerId String   @unique @map("stripe_customer_id")
+  email            String
+  name             String?
+  phone            String?
+  address          Json?    @db.JsonB
+  metadata         Json?    @db.JsonB
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscriptions  StripeSubscription[]
+  paymentMethods StripePaymentMethod[]
+
+  @@unique([tenantId, stripeCustomerId])
+  @@index([tenantId])
+  @@index([stripeCustomerId])
+  @@map("stripe_customers")
+}
+
+model StripeSubscription {
+  id                   String    @id @default(uuid()) @db.Uuid
+  tenantId             String    @map("tenant_id") @db.Uuid
+  stripeCustomerId     String    @map("stripe_customer_id")
+  stripeSubscriptionId String    @unique @map("stripe_subscription_id")
+  stripePriceId        String    @map("stripe_price_id")
+  stripeProductId      String    @map("stripe_product_id")
+  status               String // 'active', 'canceled', 'past_due', etc.
+  currentPeriodStart   DateTime  @map("current_period_start")
+  currentPeriodEnd     DateTime  @map("current_period_end")
+  cancelAtPeriodEnd    Boolean   @default(false) @map("cancel_at_period_end")
+  canceledAt           DateTime? @map("canceled_at")
+  trialStart           DateTime? @map("trial_start")
+  trialEnd             DateTime? @map("trial_end")
+  planName             String    @map("plan_name")
+  planPrice            Decimal   @map("plan_price") @db.Decimal(10, 2)
+  billingCycle         String    @map("billing_cycle") // 'monthly', 'annual'
+  currency             String    @default("usd")
+  metadata             Json?     @db.JsonB
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer StripeCustomer @relation(fields: [stripeCustomerId], references: [stripeCustomerId], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([stripeCustomerId])
+  @@index([status])
+  @@map("stripe_subscriptions")
+}
+
+model StripePaymentMethod {
+  id                    String   @id @default(uuid()) @db.Uuid
+  tenantId              String   @map("tenant_id") @db.Uuid
+  stripeCustomerId      String   @map("stripe_customer_id")
+  stripePaymentMethodId String   @unique @map("stripe_payment_method_id")
+  type                  String // 'card', 'bank_account', etc.
+  isDefault             Boolean  @default(false) @map("is_default")
+  metadata              Json?    @db.JsonB
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer StripeCustomer @relation(fields: [stripeCustomerId], references: [stripeCustomerId], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([stripeCustomerId])
+  @@map("stripe_payment_methods")
 }

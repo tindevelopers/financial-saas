@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-options'
+import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const { error, user } = await requireAuth()
+    if (error) return error
     
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    
-    const tenantId = (session.user as any).tenantId
+    const tenantId = user!.tenantId
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
     
@@ -37,13 +33,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const { error, user } = await requireAuth()
+    if (error) return error
     
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    
-    const tenantId = (session.user as any).tenantId
+    const tenantId = user!.tenantId
     const body = await request.json()
     const { name, type, description } = body
     

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-options'
+import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/db'
 import { parseCSV } from '@/lib/csv-parser'
 import { getFileUrl } from '@/lib/s3'
@@ -9,13 +8,10 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const { error, user } = await requireAuth()
+    if (error) return error
     
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    
-    const tenantId = (session.user as any).tenantId
+    const tenantId = user!.tenantId
     
     const formData = await request.formData()
     const file = formData.get('file') as File

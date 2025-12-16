@@ -1,21 +1,21 @@
 "use client"
 
-import { useSession } from "next-auth/react"
+import { useSupabaseAuth } from "@/hooks/use-supabase-auth"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { DashboardNav } from "./nav"
 
 export function DashboardLayoutWrapper({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession() || {}
+  const { user, loading } = useSupabaseAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!loading && !user) {
       router.push("/auth/signin")
     }
-  }, [status, router])
+  }, [loading, user, router])
 
-  if (status === "loading") {
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -23,7 +23,7 @@ export function DashboardLayoutWrapper({ children }: { children: React.ReactNode
     )
   }
 
-  if (!session) {
+  if (!user) {
     return null
   }
 
