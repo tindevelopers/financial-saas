@@ -29,7 +29,13 @@ export async function middleware(request: NextRequest) {
 
   // Refresh session if expired - required for Server Components
   // https://supabase.com/docs/guides/auth/server-side/nextjs
-  await supabase.auth.getUser()
+  // Use getSession() to refresh the session and update cookies
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  // If we have a session, verify the user is still valid
+  if (session) {
+    await supabase.auth.getUser()
+  }
 
   return supabaseResponse
 }

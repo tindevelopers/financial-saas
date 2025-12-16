@@ -8,15 +8,35 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    // Enhanced auth debugging
+    const cookieStore = await import('next/headers').then(m => m.cookies())
+    const allCookies = cookieStore.getAll()
+    const supabaseCookies = allCookies.filter(c => 
+      c.name.includes('supabase') || c.name.includes('sb-')
+    )
+    
+    console.log('Upload request received:', {
+      cookieCount: allCookies.length,
+      supabaseCookieCount: supabaseCookies.length,
+      supabaseCookieNames: supabaseCookies.map(c => c.name),
+    })
+    
     const { error, user } = await requireAuth()
     if (error) {
       console.error('Upload auth error: Unauthorized', {
         hasError: !!error,
         hasUser: !!user,
         cookies: request.cookies.getAll().map(c => c.name),
+        supabaseCookies: supabaseCookies.map(c => ({ name: c.name, hasValue: !!c.value })),
       })
       return error
     }
+    
+    console.log('Upload auth successful:', {
+      userId: user?.id,
+      tenantId: user?.tenantId,
+      email: user?.email,
+    })
     
     const tenantId = user!.tenantId!
     
