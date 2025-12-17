@@ -29,13 +29,6 @@ export async function GET(request: NextRequest) {
     const [transactions, total] = await Promise.all([
       prisma.transaction.findMany({
         where,
-        include: {
-          category: true,
-          upload: true,
-        },
-        orderBy: { date: 'desc' },
-        skip,
-        take: limit,
         select: {
           id: true,
           date: true,
@@ -47,7 +40,14 @@ export async function GET(request: NextRequest) {
           amount: true,
           currency: true,
           categoryId: true,
-          category: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              description: true,
+            },
+          },
           confidence: true,
           aiReasoning: true,
           status: true,
@@ -56,9 +56,19 @@ export async function GET(request: NextRequest) {
           reviewedAt: true,
           metadata: true,
           uploadId: true,
+          upload: {
+            select: {
+              id: true,
+              filename: true,
+              status: true,
+            },
+          },
           createdAt: true,
           updatedAt: true,
         },
+        orderBy: { date: 'desc' },
+        skip,
+        take: limit,
       }),
       prisma.transaction.count({ where }),
     ])
