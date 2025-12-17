@@ -796,7 +796,7 @@ const AppSidebar: React.FC = () => {
                     }
                     
                     return (
-                      <li key={typeof subItem.name === 'string' ? subItem.name : `subitem-link-${index}-${subIndex}`} role="none">
+                      <li key={ensureString(subItem.name) || `subitem-link-${index}-${subIndex}`} role="none">
                         <Link
                           href={typeof subItem.path === 'string' ? subItem.path : String(subItem.path || '')}
                           role="menuitem"
