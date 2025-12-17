@@ -431,9 +431,25 @@ const AppSidebar: React.FC = () => {
     })
   }, [tenant, isTenantLoading])
   
-  const logoUrl = branding.logo || "/images/logo/logo.svg";
-  const logoDarkUrl = branding.logo || "/images/logo/logo-dark.svg";
-  const logoIconUrl = branding.favicon || "/images/logo/logo-icon.svg";
+  // Log branding and ensure all values are strings
+  useEffect(() => {
+    console.log('[AppSidebar] Branding object:', {
+      brandingType: typeof branding,
+      branding: branding,
+      brandingKeys: branding ? Object.keys(branding) : [],
+      logoType: typeof branding?.logo,
+      logoValue: branding?.logo,
+      companyNameType: typeof branding?.companyName,
+      companyNameValue: branding?.companyName,
+      faviconType: typeof branding?.favicon,
+      faviconValue: branding?.favicon,
+    })
+  }, [branding])
+
+  const logoUrl = (typeof branding?.logo === 'string' ? branding.logo : null) || "/images/logo/logo.svg";
+  const logoDarkUrl = (typeof branding?.logo === 'string' ? branding.logo : null) || "/images/logo/logo-dark.svg";
+  const logoIconUrl = (typeof branding?.favicon === 'string' ? branding.favicon : null) || "/images/logo/logo-icon.svg";
+  const companyName = typeof branding?.companyName === 'string' ? branding.companyName : "Logo";
 
   const renderMenuItems = (
     navItems: NavItem[],
@@ -441,7 +457,17 @@ const AppSidebar: React.FC = () => {
   ) => (
     <ul className="flex flex-col gap-1">
       {navItems.map((nav, index) => (
-        <li key={nav.name}>
+        <li key={(() => {
+          const keyValue = nav.name
+          if (typeof keyValue !== 'string') {
+            console.error('[AppSidebar] nav.name used as key is not a string!', {
+              keyValueType: typeof keyValue,
+              keyValue: keyValue,
+              nav: nav,
+            })
+          }
+          return typeof keyValue === 'string' ? keyValue : String(keyValue || `nav-${index}`)
+        })()}>
           {nav.subItems ? (
             <button
               onClick={() => handleSubmenuToggle(index, menuType)}
@@ -567,7 +593,7 @@ const AppSidebar: React.FC = () => {
 
                   if (isNestedMenu) {
                     return (
-                      <li key={subItem.name} role="none">
+                      <li key={typeof subItem.name === 'string' ? subItem.name : `subitem-${index}-${subIndex}`} role="none">
                         <button
                           onClick={() => handleSubmenuToggle(index, menuType, subIndex)}
                           className="menu-dropdown-item w-full text-left flex items-center justify-between"
@@ -593,10 +619,10 @@ const AppSidebar: React.FC = () => {
                         </button>
                         {isNestedOpen && (
                           <ul className="mt-1 ml-4 space-y-1" role="menu">
-                            {subItem.subItems?.map((nestedItem) => {
+                            {subItem.subItems?.map((nestedItem, nestedIndex) => {
                               if ('path' in nestedItem && nestedItem.path) {
                                 return (
-                                  <li key={nestedItem.name} role="none">
+                                  <li key={typeof nestedItem.name === 'string' ? nestedItem.name : `nested-${subIndex}-${nestedIndex}`} role="none">
                                     <Link
                                       href={nestedItem.path}
                                       role="menuitem"
@@ -632,7 +658,7 @@ const AppSidebar: React.FC = () => {
                   // Regular submenu item with path
                   if ('path' in subItem && subItem.path) {
                     return (
-                      <li key={subItem.name} role="none">
+                      <li key={typeof subItem.name === 'string' ? subItem.name : `subitem-link-${index}-${subIndex}`} role="none">
                         <Link
                           href={subItem.path}
                           role="menuitem"
@@ -818,14 +844,14 @@ const AppSidebar: React.FC = () => {
               <Image
                 className="dark:hidden"
                 src={logoUrl}
-                alt={branding.companyName || "Logo"}
+                alt={companyName}
                 width={150}
                 height={40}
               />
               <Image
                 className="hidden dark:block"
                 src={logoDarkUrl}
-                alt={branding.companyName || "Logo"}
+                alt={companyName}
                 width={150}
                 height={40}
               />

@@ -25,12 +25,22 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-    // Log error details
+    // Log error details with full object inspection
     console.error('[ErrorBoundary] Caught error:', {
       message: error.message,
       stack: error.stack,
       name: error.name,
+      errorType: typeof error,
+      errorConstructor: error.constructor?.name,
+      errorKeys: Object.keys(error),
+      errorStringified: JSON.stringify(error, Object.getOwnPropertyNames(error)),
     })
+    
+    // Try to extract more details from the error message
+    if (error.message.includes('object')) {
+      console.error('[ErrorBoundary] React Error #130 detected - Object being rendered!')
+      console.error('[ErrorBoundary] Full error object:', error)
+    }
     
     return {
       hasError: true,
@@ -39,12 +49,16 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log detailed error information
+    // Log detailed error information with full object details
     console.error('[ErrorBoundary] Error details:', {
       error: {
         message: error.message,
         stack: error.stack,
         name: error.name,
+        type: typeof error,
+        constructor: error.constructor?.name,
+        keys: Object.keys(error),
+        stringified: JSON.stringify(error, Object.getOwnPropertyNames(error)),
       },
       errorInfo: {
         componentStack: errorInfo.componentStack,
@@ -54,6 +68,17 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
     // Log what was being rendered
     console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack)
+    
+    // Try to extract the problematic object from the error
+    if (error.message.includes('object')) {
+      console.error('[ErrorBoundary] ===== REACT ERROR #130 DETECTED =====')
+      console.error('[ErrorBoundary] An object is being rendered directly in JSX')
+      console.error('[ErrorBoundary] Check the component stack above to find the component')
+      console.error('[ErrorBoundary] Look for places where objects might be rendered:')
+      console.error('[ErrorBoundary] - tenant.name, tenant, user, user.email')
+      console.error('[ErrorBoundary] - nav.name, subItem.name, nestedItem.name')
+      console.error('[ErrorBoundary] - Any object properties being rendered directly')
+    }
     
     this.setState({
       error,
