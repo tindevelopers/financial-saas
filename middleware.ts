@@ -45,14 +45,24 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone()
     const pathname = url.pathname
     
+    // Allow auth routes, API routes, and static assets
+    const allowedPaths = ['/auth', '/api', '/_next', '/favicon', '/admin']
+    const isAllowedPath = allowedPaths.some(path => pathname.startsWith(path))
+    
     // If accessing root on admin subdomain, redirect to admin dashboard
     if (pathname === '/') {
       url.pathname = '/admin'
       return NextResponse.redirect(url)
     }
     
-    // If not accessing /admin/* routes, redirect to /admin
-    if (!pathname.startsWith('/admin') && !pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
+    // If accessing user routes (dashboard, upload, transactions) on admin subdomain, redirect to admin
+    if (!isAllowedPath && (pathname.startsWith('/dashboard') || pathname.startsWith('/upload') || pathname.startsWith('/transactions'))) {
+      url.pathname = '/admin'
+      return NextResponse.redirect(url)
+    }
+    
+    // If not accessing /admin/* routes and not an allowed path, redirect to /admin
+    if (!pathname.startsWith('/admin') && !isAllowedPath) {
       url.pathname = '/admin'
       return NextResponse.redirect(url)
     }

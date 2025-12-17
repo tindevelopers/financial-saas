@@ -15,15 +15,24 @@ export function DashboardLayoutWrapper({ children }: { children: React.ReactNode
       return
     }
 
-    // If user is admin and on regular domain, redirect to admin subdomain
+    // If on admin subdomain, redirect to admin panel
     if (user && typeof window !== 'undefined') {
+      const isAdminSubdomain = window.location.hostname.startsWith('admin.')
+      
+      if (isAdminSubdomain) {
+        // On admin subdomain, redirect to admin panel
+        router.push('/admin')
+        return
+      }
+      
+      // If user is admin and on regular domain, redirect to admin subdomain
       const checkAdmin = async () => {
         try {
           const response = await fetch("/api/admin/check-access", {
             credentials: "include",
           })
           
-          if (response.ok && !window.location.hostname.startsWith('admin.')) {
+          if (response.ok) {
             // User is admin but on regular domain, redirect to admin subdomain
             const adminUrl = new URL("/admin", window.location.origin)
             adminUrl.hostname = `admin.${adminUrl.hostname.split('.').slice(1).join('.')}`
