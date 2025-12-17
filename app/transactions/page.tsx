@@ -62,7 +62,22 @@ export default function TransactionsPage() {
   useEffect(() => {
     loadTransactions()
     loadCategories()
+    loadSettings()
   }, [])
+
+  const loadSettings = async () => {
+    try {
+      const response = await fetch("/api/categorize/settings", {
+        credentials: "include",
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setCustomInstructions(data.customInstructions || "")
+      }
+    } catch (error: any) {
+      console.error("Error loading settings:", error)
+    }
+  }
 
   const loadTransactions = async () => {
     try {

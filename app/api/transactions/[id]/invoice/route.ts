@@ -35,35 +35,23 @@ export async function POST(
       return NextResponse.json({ error: 'No invoice file provided' }, { status: 400 })
     }
     
-    // Generate presigned URL for invoice upload
-    const { uploadUrl, cloudStoragePath } = await generatePresignedUploadUrl(
-      `invoice-${transactionId}-${invoiceFile.name}`,
-      invoiceFile.type,
-      false // Private file
-    )
-    
-    // Upload invoice to S3
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'PUT',
-      body: invoiceFile,
-      headers: {
-        'Content-Type': invoiceFile.type,
-      },
-    })
-    
-    if (!uploadResponse.ok) {
-      throw new Error('Failed to upload invoice to S3')
+    // For now, store invoice metadata directly (S3 upload can be added later)
+    // In production, upload to S3 and store the URL
+    const invoiceData = {
+      filename: invoiceFile.name,
+      size: invoiceFile.size,
+      type: invoiceFile.type,
+      uploadedAt: new Date().toISOString(),
+      // Note: For full implementation, upload file to S3 and store URL
+      // For now, we'll store metadata and note that file needs to be uploaded
+      note: 'File upload to S3 pending - metadata stored',
     }
     
     // Update transaction metadata with invoice info
     const currentMetadata = (transaction.metadata as any) || {}
     const updatedMetadata = {
       ...currentMetadata,
-      invoice: {
-        url: cloudStoragePath,
-        filename: invoiceFile.name,
-        uploadedAt: new Date().toISOString(),
-      },
+      invoice: invoiceData,
     }
     
     const updated = await prisma.transaction.update({
@@ -75,9 +63,9 @@ export async function POST(
     })
     
     return NextResponse.json({
-      message: 'Invoice uploaded successfully',
+      message: 'Invoice metadata saved successfully',
       transaction: updated,
-      invoiceUrl: cloudStoragePath,
+      invoice: invoiceData,
     })
   } catch (error: any) {
     console.error('Upload invoice error:', error)
@@ -117,14 +105,19 @@ export async function GET(
       return NextResponse.json({ error: 'No invoice found' }, { status: 404 })
     }
     
-    // Generate signed URL for invoice download
-    const { getFileUrl } = await import('@/lib/s3')
-    const signedUrl = await getFileUrl(invoice.url, false)
+    // If invoice has URL, generate signed URL for download
+    // Otherwise, return metadata
+    let invoiceUrl = null
+    if (invoice.url) {
+      const { getFileUrl } = await import('@/lib/s3')
+      invoiceUrl = await getFileUrl(invoice.url, false)
+    }
     
     return NextResponse.json({
-      invoiceUrl: signedUrl,
+      invoiceUrl,
       filename: invoice.filename,
       uploadedAt: invoice.uploadedAt,
+      metadata: invoice,
     })
   } catch (error: any) {
     console.error('Get invoice error:', error)
