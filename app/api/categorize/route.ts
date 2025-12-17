@@ -20,11 +20,18 @@ export async function POST(request: NextRequest) {
     // Get tenant settings for custom AI instructions
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
+      include: {
+        tenantSettings: {
+          select: {
+            aiCustomInstructions: true,
+          },
+        },
+      },
     })
     
-    // Use custom instructions from request, or default
-    // Note: Tenant-level instructions would require a settings table or metadata field
+    // Use custom instructions from request, or from tenant settings, or default
     const aiInstructions = customInstructions || 
+      tenant?.tenantSettings?.aiCustomInstructions ||
       'Analyze transaction descriptions carefully. Consider UK business context, common merchant names, and transaction patterns. Use invoice data when available in metadata to improve accuracy.'
     
     // Get transactions for this batch (or all if no batch specified)

@@ -20,13 +20,15 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         features: true,
+        tenantSettings: {
+          select: {
+            aiCustomInstructions: true,
+          },
+        },
       },
     })
     
-    // TODO: Add metadata field to Tenant model or create tenant_settings table
-    // For now, custom instructions are not persisted
-    // They can be passed per request to /api/categorize
-    const customInstructions = null
+    const customInstructions = tenant?.tenantSettings?.aiCustomInstructions || null
     
     return NextResponse.json({
       customInstructions,
@@ -50,28 +52,24 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { customInstructions } = body
     
-    // Get current tenant to preserve existing metadata
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
+    // Upsert tenant settings (create if doesn't exist, update if exists)
+    const tenantSettings = await prisma.tenantSettings.upsert({
+      where: { tenantId },
+      create: {
+        tenantId,
+        aiCustomInstructions: customInstructions || null,
+      },
+      update: {
+        aiCustomInstructions: customInstructions || null,
+        updatedAt: new Date(),
+      },
     })
     
-    // Update tenant with custom instructions in metadata
-    // Using a workaround since Tenant doesn't have metadata field - store in features array or create migration
-    // For now, we'll store it in a way that can be retrieved
-    // In production, add a metadata Json field to Tenant model
-    
-    // Store instructions - we'll use a custom approach
-    // Option 1: Add to features array (temporary)
-    // Option 2: Create a tenant_settings table (better)
-    // For now, we'll note this and return success
-    
-    // TODO: Add metadata field to Tenant model or create tenant_settings table
-    console.log(`[SETTINGS] Saving custom instructions for tenant ${tenantId}`)
+    console.log(`[SETTINGS] Saved custom instructions for tenant ${tenantId}`)
     
     return NextResponse.json({
-      message: 'Settings updated',
-      customInstructions,
-      note: 'Instructions will be used for future categorizations. Consider adding a tenant_settings table for persistence.',
+      message: 'Settings updated successfully',
+      customInstructions: tenantSettings.aiCustomInstructions,
     })
   } catch (error: any) {
     console.error('Update categorize settings error:', error)

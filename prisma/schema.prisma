@@ -6,7 +6,8 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // Optional: for migrations, use direct connection
+  // directUrl is optional - only needed for migrations if using connection pooler
+  // directUrl = env("DIRECT_URL")
 }
 
 // ========================================
@@ -56,6 +57,7 @@ model Tenant {
   userTenantRoles         UserTenantRole[]
   stripeSubscriptions     StripeSubscription[]
   stripePaymentMethods    StripePaymentMethod[]
+  tenantSettings          TenantSettings?
 
   @@index([status])
   @@index([domain])
@@ -410,4 +412,27 @@ model StripePaymentMethod {
   @@index([tenantId])
   @@index([stripeCustomerId])
   @@map("stripe_payment_methods")
+}
+
+// ========================================
+// TENANT SETTINGS
+// ========================================
+
+model TenantSettings {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId String   @unique @map("tenant_id") @db.Uuid
+  
+  // AI Categorization Settings
+  aiCustomInstructions String? @map("ai_custom_instructions") @db.Text
+  
+  // Additional settings can be added here
+  metadata Json? @db.JsonB
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("tenant_settings")
 }
