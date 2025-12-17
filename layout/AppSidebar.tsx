@@ -557,46 +557,48 @@ const AppSidebar: React.FC = () => {
           ) : (
             nav.path && (
               <Link
-                href={nav.path}
+                href={typeof nav.path === 'string' ? nav.path : String(nav.path || '')}
                 className={`menu-item group ${
-                  isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+                  isActive(typeof nav.path === 'string' ? nav.path : String(nav.path || '')) ? "menu-item-active" : "menu-item-inactive"
                 }`}
               >
-                <span
-                  className={`${
-                    isActive(nav.path)
-                      ? "menu-item-icon-active"
-                      : "menu-item-icon-inactive"
-                  }`}
-                >
-                  {(() => {
-                    // Ensure icon is a valid React element, not an object
-                    if (nav.icon && (React.isValidElement(nav.icon) || typeof nav.icon === 'string' || typeof nav.icon === 'number')) {
-                      return nav.icon
-                    }
-                    console.error('[AppSidebar] nav.icon is not a valid React element!', {
-                      iconType: typeof nav.icon,
-                      icon: nav.icon,
-                      nav: nav,
-                    })
-                    return null
-                  })()}
-                </span>
-                {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className={`menu-item-text`}>
+                <>
+                  <span
+                    className={`${
+                      isActive(typeof nav.path === 'string' ? nav.path : String(nav.path || ''))
+                        ? "menu-item-icon-active"
+                        : "menu-item-icon-inactive"
+                    }`}
+                  >
                     {(() => {
-                      const navName = nav.name
-                      if (typeof navName !== 'string') {
-                        console.error('[AppSidebar] nav.name is not a string!', {
-                          navNameType: typeof navName,
-                          navNameValue: navName,
-                          nav: nav,
-                        })
+                      // Ensure icon is a valid React element, not an object
+                      if (nav.icon && (React.isValidElement(nav.icon) || typeof nav.icon === 'string' || typeof nav.icon === 'number')) {
+                        return nav.icon
                       }
-                      return typeof navName === 'string' ? navName : String(navName || '')
+                      console.error('[AppSidebar] nav.icon is not a valid React element!', {
+                        iconType: typeof nav.icon,
+                        icon: nav.icon,
+                        nav: nav,
+                      })
+                      return null
                     })()}
                   </span>
-                )}
+                  {(isExpanded || isHovered || isMobileOpen) && (
+                    <span className={`menu-item-text`}>
+                      {(() => {
+                        const navName = nav.name
+                        if (typeof navName !== 'string') {
+                          console.error('[AppSidebar] nav.name is not a string!', {
+                            navNameType: typeof navName,
+                            navNameValue: navName,
+                            nav: nav,
+                          })
+                        }
+                        return typeof navName === 'string' ? navName : String(navName || '')
+                      })()}
+                    </span>
+                  )}
+                </>
               </Link>
             )
           )}
@@ -657,10 +659,10 @@ const AppSidebar: React.FC = () => {
                                 return (
                                   <li key={typeof nestedItem.name === 'string' ? nestedItem.name : `nested-${subIndex}-${nestedIndex}`} role="none">
                                     <Link
-                                      href={nestedItem.path}
+                                      href={typeof nestedItem.path === 'string' ? nestedItem.path : String(nestedItem.path || '')}
                                       role="menuitem"
                                       className={`menu-dropdown-item ${
-                                        isActive(nestedItem.path)
+                                        isActive(typeof nestedItem.path === 'string' ? nestedItem.path : String(nestedItem.path || ''))
                                           ? "menu-dropdown-item-active"
                                           : "menu-dropdown-item-inactive"
                                       }`}
@@ -690,74 +692,98 @@ const AppSidebar: React.FC = () => {
 
                   // Regular submenu item with path
                   if ('path' in subItem && subItem.path) {
+                    // Log subItem before rendering to identify any objects
+                    console.log('[AppSidebar] Rendering subItem Link:', {
+                      subItemType: typeof subItem,
+                      subItem: subItem,
+                      subItemKeys: Object.keys(subItem),
+                      nameType: typeof subItem.name,
+                      nameValue: subItem.name,
+                      pathType: typeof subItem.path,
+                      pathValue: subItem.path,
+                      newType: typeof subItem.new,
+                      newValue: subItem.new,
+                      proType: typeof subItem.pro,
+                      proValue: subItem.pro,
+                    })
+                    
                     return (
                       <li key={typeof subItem.name === 'string' ? subItem.name : `subitem-link-${index}-${subIndex}`} role="none">
                         <Link
-                          href={subItem.path}
+                          href={typeof subItem.path === 'string' ? subItem.path : String(subItem.path || '')}
                           role="menuitem"
                           className={`menu-dropdown-item ${
-                            isActive(subItem.path)
+                            isActive(typeof subItem.path === 'string' ? subItem.path : String(subItem.path || ''))
                               ? "menu-dropdown-item-active"
                               : "menu-dropdown-item-inactive"
                           }`}
                         >
-                          {(() => {
-                            const subItemName = subItem.name
-                            if (typeof subItemName !== 'string') {
-                              console.error('[AppSidebar] subItem.name is not a string!', {
-                                subItemNameType: typeof subItemName,
-                                subItemNameValue: subItemName,
-                                subItem: subItem,
+                          <>
+                            {(() => {
+                              const subItemName = subItem.name
+                              if (typeof subItemName !== 'string') {
+                                console.error('[AppSidebar] subItem.name is not a string!', {
+                                  subItemNameType: typeof subItemName,
+                                  subItemNameValue: subItemName,
+                                  subItem: subItem,
+                                })
+                              }
+                              const safeName = typeof subItemName === 'string' ? subItemName : String(subItemName || '')
+                              console.log('[AppSidebar] Rendering subItem name:', {
+                                safeNameType: typeof safeName,
+                                safeNameValue: safeName,
                               })
-                            }
-                            return typeof subItemName === 'string' ? subItemName : String(subItemName || '')
-                          })()}
-                          <span className="flex items-center gap-1 ml-auto">
-                            {(() => {
-                              // Ensure subItem.new is a boolean, not an object
-                              const isNew = typeof subItem.new === 'boolean' ? subItem.new : false
-                              if (subItem.new && typeof subItem.new !== 'boolean') {
-                                console.error('[AppSidebar] subItem.new is not a boolean!', {
-                                  newType: typeof subItem.new,
-                                  newValue: subItem.new,
-                                  subItem: subItem,
-                                })
-                              }
-                              return isNew ? (
-                                <span
-                                  className={`ml-auto ${
-                                    isActive(subItem.path)
-                                      ? "menu-dropdown-badge-active"
-                                      : "menu-dropdown-badge-inactive"
-                                  } menu-dropdown-badge `}
-                                >
-                                  new
-                                </span>
-                              ) : null
+                              return safeName
                             })()}
-                            {(() => {
-                              // Ensure subItem.pro is a boolean, not an object
-                              const isPro = typeof subItem.pro === 'boolean' ? subItem.pro : false
-                              if (subItem.pro && typeof subItem.pro !== 'boolean') {
-                                console.error('[AppSidebar] subItem.pro is not a boolean!', {
-                                  proType: typeof subItem.pro,
-                                  proValue: subItem.pro,
-                                  subItem: subItem,
-                                })
-                              }
-                              return isPro ? (
-                                <span
-                                  className={`ml-auto ${
-                                    isActive(subItem.path)
-                                      ? "menu-dropdown-badge-pro-active"
-                                      : "menu-dropdown-badge-pro-inactive"
-                                  } menu-dropdown-badge-pro `}
-                                >
-                                  pro
-                                </span>
-                              ) : null
-                            })()}
-                          </span>
+                            <span className="flex items-center gap-1 ml-auto">
+                              {(() => {
+                                // Ensure subItem.new is a boolean, not an object
+                                const isNew = typeof subItem.new === 'boolean' ? subItem.new : false
+                                if (subItem.new && typeof subItem.new !== 'boolean') {
+                                  console.error('[AppSidebar] subItem.new is not a boolean!', {
+                                    newType: typeof subItem.new,
+                                    newValue: subItem.new,
+                                    subItem: subItem,
+                                  })
+                                }
+                                const safePath = typeof subItem.path === 'string' ? subItem.path : String(subItem.path || '')
+                                return isNew ? (
+                                  <span
+                                    className={`ml-auto ${
+                                      isActive(safePath)
+                                        ? "menu-dropdown-badge-active"
+                                        : "menu-dropdown-badge-inactive"
+                                    } menu-dropdown-badge `}
+                                  >
+                                    new
+                                  </span>
+                                ) : null
+                              })()}
+                              {(() => {
+                                // Ensure subItem.pro is a boolean, not an object
+                                const isPro = typeof subItem.pro === 'boolean' ? subItem.pro : false
+                                if (subItem.pro && typeof subItem.pro !== 'boolean') {
+                                  console.error('[AppSidebar] subItem.pro is not a boolean!', {
+                                    proType: typeof subItem.pro,
+                                    proValue: subItem.pro,
+                                    subItem: subItem,
+                                  })
+                                }
+                                const safePath = typeof subItem.path === 'string' ? subItem.path : String(subItem.path || '')
+                                return isPro ? (
+                                  <span
+                                    className={`ml-auto ${
+                                      isActive(safePath)
+                                        ? "menu-dropdown-badge-pro-active"
+                                        : "menu-dropdown-badge-pro-inactive"
+                                    } menu-dropdown-badge-pro `}
+                                  >
+                                    pro
+                                  </span>
+                                ) : null
+                              })()}
+                            </span>
+                          </>
                         </Link>
                       </li>
                     );
