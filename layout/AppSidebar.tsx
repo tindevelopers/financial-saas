@@ -717,7 +717,7 @@ const AppSidebar: React.FC = () => {
 
                   if (isNestedMenu) {
                     return (
-                      <li key={typeof subItem.name === 'string' ? subItem.name : `subitem-${index}-${subIndex}`} role="none">
+                      <li key={ensureString(subItem.name) || `subitem-${index}-${subIndex}`} role="none">
                         <button
                           onClick={() => handleSubmenuToggle(index, menuType, subIndex)}
                           className="menu-dropdown-item w-full text-left flex items-center justify-between"
@@ -736,7 +736,7 @@ const AppSidebar: React.FC = () => {
                             {subItem.subItems?.map((nestedItem, nestedIndex) => {
                               if ('path' in nestedItem && nestedItem.path) {
                                 return (
-                                  <li key={typeof nestedItem.name === 'string' ? nestedItem.name : `nested-${subIndex}-${nestedIndex}`} role="none">
+                                  <li key={ensureString(nestedItem.name) || `nested-${subIndex}-${nestedIndex}`} role="none">
                                     <Link
                                       href={typeof nestedItem.path === 'string' ? nestedItem.path : String(nestedItem.path || '')}
                                       role="menuitem"
