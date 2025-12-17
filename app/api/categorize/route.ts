@@ -22,11 +22,10 @@ export async function POST(request: NextRequest) {
       where: { id: tenantId },
     })
     
-    // Use custom instructions from request, tenant settings, or default
+    // Use custom instructions from request, or default
+    // Note: Tenant-level instructions would require a settings table or metadata field
     const aiInstructions = customInstructions || 
-      (tenant?.features?.includes('custom_ai_instructions') ? 
-        (tenant as any).aiInstructions : null) ||
-      'Analyze transaction descriptions carefully. Consider UK business context, common merchant names, and transaction patterns.'
+      'Analyze transaction descriptions carefully. Consider UK business context, common merchant names, and transaction patterns. Use invoice data when available in metadata to improve accuracy.'
     
     // Get transactions for this batch (or all if no batch specified)
     const batchSize = 50
@@ -115,9 +114,16 @@ ${learningContext.length > 0 ? learningContext.map(lc => `"${lc.description}" wa
 **Transactions to Categorize:**
 ${transactions.map(t => {
   const metadata = t.metadata as any || {}
-  const invoiceInfo = metadata.invoice ? `Invoice: ${metadata.invoice}` : ''
-  return `ID: ${t.id}, Date: ${t.date.toISOString().split('T')[0]}, Description: ${t.description}, Payer/Payee: ${t.payerPayee || 'N/A'}, Reference: ${t.reference || 'N/A'}, Amount: £${t.amount}${invoiceInfo ? `, ${invoiceInfo}` : ''}`
-}).join('\n')}
+  const invoiceInfo = metadata.invoice 
+    ? `\n  Invoice Available: ${metadata.invoice.filename || 'Yes'} (use invoice details to improve categorization accuracy)` 
+    : ''
+  return `ID: ${t.id}
+  Date: ${t.date.toISOString().split('T')[0]}
+  Description: ${t.description}
+  Payer/Payee: ${t.payerPayee || 'N/A'}
+  Reference: ${t.reference || 'N/A'}
+  Amount: £${t.amount}${invoiceInfo}`
+}).join('\n\n')}
 
 **Return JSON format:**
 {

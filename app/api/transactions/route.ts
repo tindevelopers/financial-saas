@@ -54,6 +54,8 @@ export async function GET(request: NextRequest) {
           needsReview: true,
           isReviewed: true,
           reviewedAt: true,
+          metadata: true,
+          uploadId: true,
           createdAt: true,
           updatedAt: true,
         },

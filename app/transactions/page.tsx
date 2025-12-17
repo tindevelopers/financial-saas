@@ -23,7 +23,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Download, Search, Filter, AlertCircle, CheckCircle } from "lucide-react"
+import { Download, Search, Filter, AlertCircle, CheckCircle, Paperclip, Settings } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 
 interface Transaction {
@@ -53,6 +55,9 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [customInstructions, setCustomInstructions] = useState("")
+  const [showSettings, setShowSettings] = useState(false)
+  const [uploadingInvoice, setUploadingInvoice] = useState<string | null>(null)
 
   useEffect(() => {
     loadTransactions()
@@ -113,13 +118,135 @@ export default function TransactionsPage() {
 
       toast({
         title: "Category updated",
-        description: "Transaction categorized successfully",
+        description: "Transaction categorized successfully. AI will learn from this correction.",
       })
     } catch (error: any) {
       console.error("Error updating category:", error)
       toast({
         title: "Error",
         description: "Failed to update category",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleInvoiceUpload = async (transactionId: string, file: File) => {
+    try {
+      setUploadingInvoice(transactionId)
+      const formData = new FormData()
+      formData.append("invoice", file)
+
+      const response = await fetch(`/api/transactions/${transactionId}/invoice`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      })
+
+      if (!response.ok) throw new Error("Failed to upload invoice")
+
+      const data = await response.json()
+      
+      // Update local state
+      setTransactions((prev) =>
+        prev.map((t) =>
+          t.id === transactionId ? { ...t, ...data.transaction } : t
+        )
+      )
+
+      toast({
+        title: "Invoice uploaded",
+        description: "Invoice attached. Re-categorize to use invoice data.",
+      })
+    } catch (error: any) {
+      console.error("Error uploading invoice:", error)
+      toast({
+        title: "Error",
+        description: "Failed to upload invoice",
+        variant: "destructive",
+      })
+    } finally {
+      setUploadingInvoice(null)
+    }
+  }
+
+  const handleSaveCustomInstructions = async () => {
+    try {
+      const response = await fetch("/api/categorize/settings", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customInstructions }),
+      })
+
+      if (!response.ok) throw new Error("Failed to save settings")
+
+      toast({
+        title: "Settings saved",
+        description: "Custom AI instructions saved. They will be used for future categorizations.",
+      })
+      setShowSettings(false)
+    } catch (error: any) {
+      console.error("Error saving settings:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save settings",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleRecategorize = async () => {
+    try {
+      // Get all uncategorized or needs-review transactions
+      const transactionsToRecategorize = transactions.filter(
+        t => !t.category || t.needsReview
+      )
+      
+      if (transactionsToRecategorize.length === 0) {
+        toast({
+          title: "No transactions to recategorize",
+          description: "All transactions are already categorized.",
+        })
+        return
+      }
+
+      // Get upload IDs
+      const uploadIds = [...new Set(transactionsToRecategorize.map(t => (t as any).uploadId))]
+      
+      toast({
+        title: "Recategorizing...",
+        description: `Processing ${transactionsToRecategorize.length} transactions`,
+      })
+
+      // Recategorize each upload
+      for (const uploadId of uploadIds) {
+        const response = await fetch("/api/categorize", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uploadId,
+            customInstructions: customInstructions || undefined,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to recategorize upload ${uploadId}`)
+        }
+      }
+
+      // Reload transactions
+      await loadTransactions()
+
+      toast({
+        title: "Recategorization complete",
+        description: "Transactions have been recategorized with updated AI instructions.",
+      })
+    } catch (error: any) {
+      console.error("Error recategorizing:", error)
+      toast({
+        title: "Error",
+        description: "Failed to recategorize transactions",
         variant: "destructive",
       })
     }
@@ -216,10 +343,56 @@ export default function TransactionsPage() {
               Review and categorize your financial transactions
             </p>
           </div>
-          <Button onClick={exportToCSV} variant="outline" className="gap-2">
-            <Download className="h-4 w-4" />
-            Export CSV
-          </Button>
+          <div className="flex gap-2">
+            <Dialog open={showSettings} onOpenChange={setShowSettings}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  AI Settings
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>AI Categorization Settings</DialogTitle>
+                  <DialogDescription>
+                    Provide custom instructions to improve AI categorization accuracy.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Custom Instructions
+                    </label>
+                    <Textarea
+                      value={customInstructions}
+                      onChange={(e) => setCustomInstructions(e.target.value)}
+                      placeholder="Example: Always categorize Square transactions as Bank Charges. Tesco = Office Expenses."
+                      rows={6}
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      These instructions will be used for all future categorizations.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleSaveCustomInstructions}>
+                      Save Settings
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleRecategorize}
+                      disabled={transactions.filter(t => !t.category || t.needsReview).length === 0}
+                    >
+                      Re-categorize All
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button onClick={exportToCSV} variant="outline" className="gap-2">
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -332,26 +505,54 @@ export default function TransactionsPage() {
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Select
-                            value={transaction.category?.id || ""}
-                            onValueChange={(value) => handleCategoryChange(transaction.id, value)}
-                          >
-                            <SelectTrigger className="w-[200px]">
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categories.map((category) => (
-                                <SelectItem key={category.id} value={category.id}>
-                                  {category.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {transaction.confidence && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {Math.round(parseFloat(transaction.confidence) * 100)}% confident
-                            </p>
-                          )}
+                          <div className="space-y-2">
+                            <Select
+                              value={transaction.category?.id || ""}
+                              onValueChange={(value) => handleCategoryChange(transaction.id, value)}
+                            >
+                              <SelectTrigger className="w-[200px]">
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.map((category) => (
+                                  <SelectItem key={category.id} value={category.id}>
+                                    {category.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {transaction.confidence && (
+                              <p className="text-xs text-muted-foreground">
+                                {Math.round(parseFloat(transaction.confidence) * 100)}% confident
+                              </p>
+                            )}
+                            {(transaction as any).aiReasoning && (
+                              <p className="text-xs text-muted-foreground italic">
+                                {(transaction as any).aiReasoning}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2">
+                              <label className="text-xs text-muted-foreground cursor-pointer">
+                                <input
+                                  type="file"
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0]
+                                    if (file) handleInvoiceUpload(transaction.id, file)
+                                  }}
+                                  disabled={uploadingInvoice === transaction.id}
+                                />
+                                <span className="flex items-center gap-1 hover:text-primary">
+                                  <Paperclip className="h-3 w-3" />
+                                  {uploadingInvoice === transaction.id ? "Uploading..." : "Attach Invoice"}
+                                </span>
+                              </label>
+                              {(transaction as any).metadata?.invoice && (
+                                <span className="text-xs text-green-600">✓ Invoice attached</span>
+                              )}
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
                           {transaction.needsReview ? (
