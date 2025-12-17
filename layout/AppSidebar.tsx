@@ -400,6 +400,55 @@ const supportItems: NavItem[] = [
   },
 ];
 
+// Helper function to absolutely guarantee a primitive string
+// This function will NEVER return an object - only primitive strings
+function ensureString(value: any): string {
+  // Handle null/undefined
+  if (value === null || value === undefined) {
+    return ''
+  }
+  
+  // If already a primitive string, return it
+  if (typeof value === 'string') {
+    return value
+  }
+  
+  // If it's a number or boolean, convert to string
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value)
+  }
+  
+  // If it's an object, try to extract a string
+  if (typeof value === 'object') {
+    // Try common object properties
+    if (typeof value.name === 'string') return value.name
+    if (typeof value.value === 'string') return value.value
+    if (typeof value.text === 'string') return value.text
+    if (typeof value.label === 'string') return value.label
+    if (typeof value.toString === 'function') {
+      try {
+        const str = value.toString()
+        if (typeof str === 'string') return str
+      } catch (e) {
+        // toString failed, continue
+      }
+    }
+    // Last resort: JSON.stringify
+    try {
+      return JSON.stringify(value).substring(0, 100)
+    } catch (e) {
+      return '[Object]'
+    }
+  }
+  
+  // Fallback: convert to string
+  try {
+    return String(value)
+  } catch (e) {
+    return ''
+  }
+}
+
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
@@ -507,17 +556,7 @@ const AppSidebar: React.FC = () => {
               </span>
               {(isExpanded || isHovered || isMobileOpen) && (
                 <span className={`menu-item-text`}>
-                  {(() => {
-                    const navName = nav.name
-                    if (typeof navName !== 'string') {
-                      console.error('[AppSidebar] nav.name is not a string!', {
-                        navNameType: typeof navName,
-                        navNameValue: navName,
-                        nav: nav,
-                      })
-                    }
-                    return typeof navName === 'string' ? navName : String(navName || '')
-                  })()}
+                  {ensureString(nav.name)}
                 </span>
               )}
               {(() => {
@@ -634,17 +673,7 @@ const AppSidebar: React.FC = () => {
                           className="menu-dropdown-item w-full text-left flex items-center justify-between"
                         >
                           <span>
-                            {(() => {
-                              const subItemName = subItem.name
-                              if (typeof subItemName !== 'string') {
-                                console.error('[AppSidebar] subItem.name is not a string!', {
-                                  subItemNameType: typeof subItemName,
-                                  subItemNameValue: subItemName,
-                                  subItem: subItem,
-                                })
-                              }
-                              return typeof subItemName === 'string' ? subItemName : String(subItemName || '')
-                            })()}
+                            {ensureString(subItem.name)}
                           </span>
                           <ChevronDownIcon
                             className={`w-4 h-4 transition-transform duration-200 ${
@@ -667,17 +696,7 @@ const AppSidebar: React.FC = () => {
                                           : "menu-dropdown-item-inactive"
                                       }`}
                                     >
-                                      {(() => {
-                                        const nestedItemName = nestedItem.name
-                                        if (typeof nestedItemName !== 'string') {
-                                          console.error('[AppSidebar] nestedItem.name is not a string!', {
-                                            nestedItemNameType: typeof nestedItemName,
-                                            nestedItemNameValue: nestedItemName,
-                                            nestedItem: nestedItem,
-                                          })
-                                        }
-                                        return typeof nestedItemName === 'string' ? nestedItemName : String(nestedItemName || '')
-                                      })()}
+                                      {ensureString(nestedItem.name)}
                                     </Link>
                                   </li>
                                 );
@@ -692,23 +711,15 @@ const AppSidebar: React.FC = () => {
 
                   // Regular submenu item with path
                   if ('path' in subItem && subItem.path) {
-                    // Log subItem before rendering to identify any objects
-                    // IMPORTANT: Use JSON.stringify to see actual object structure
-                    console.log('[AppSidebar] Rendering subItem Link:', {
-                      subItemType: typeof subItem,
-                      subItemStringified: JSON.stringify(subItem),
-                      subItemKeys: Object.keys(subItem),
-                      nameType: typeof subItem.name,
-                      nameValue: subItem.name,
-                      nameStringified: typeof subItem.name === 'object' ? JSON.stringify(subItem.name) : subItem.name,
-                      pathType: typeof subItem.path,
-                      pathValue: subItem.path,
-                      pathStringified: typeof subItem.path === 'object' ? JSON.stringify(subItem.path) : subItem.path,
-                      newType: typeof subItem.new,
-                      newValue: subItem.new,
-                      proType: typeof subItem.pro,
-                      proValue: subItem.pro,
-                    })
+                    // Log only if name is not a string (for debugging)
+                    if (typeof subItem.name !== 'string') {
+                      console.error('[AppSidebar] subItem.name is not a string:', {
+                        nameType: typeof subItem.name,
+                        nameValue: subItem.name,
+                        nameStringified: typeof subItem.name === 'object' ? JSON.stringify(subItem.name) : subItem.name,
+                        subItem: subItem,
+                      })
+                    }
                     
                     return (
                       <li key={typeof subItem.name === 'string' ? subItem.name : `subitem-link-${index}-${subIndex}`} role="none">
@@ -722,102 +733,7 @@ const AppSidebar: React.FC = () => {
                           }`}
                         >
                           <>
-                          {(() => {
-                            const subItemName = subItem.name
-                            console.log('[AppSidebar] Processing subItem name:', {
-                              subItemNameType: typeof subItemName,
-                              subItemNameValue: subItemName,
-                              subItemNameIsString: typeof subItemName === 'string',
-                              subItemNameIsObject: typeof subItemName === 'object' && subItemName !== null,
-                              subItemNameStringified: typeof subItemName === 'object' ? JSON.stringify(subItemName) : subItemName,
-                            })
-                            
-                            if (typeof subItemName !== 'string') {
-                              console.error('[AppSidebar] subItem.name is not a string!', {
-                                subItemNameType: typeof subItemName,
-                                subItemNameValue: subItemName,
-                                subItemNameStringified: JSON.stringify(subItemName),
-                                subItem: subItem,
-                              })
-                            }
-                            
-                            // Force conversion to string - handle all cases
-                            let safeName: string
-                            if (typeof subItemName === 'string') {
-                              safeName = subItemName
-                            } else if (subItemName === null || subItemName === undefined) {
-                              safeName = ''
-                            } else if (typeof subItemName === 'object') {
-                              // If it's an object, try to extract a meaningful string
-                              // Check for common object patterns
-                              if (subItemName && typeof subItemName === 'object') {
-                                // Try to get a string property
-                                const obj = subItemName as any
-                                if (typeof obj.name === 'string') {
-                                  safeName = obj.name
-                                } else if (typeof obj.value === 'string') {
-                                  safeName = obj.value
-                                } else if (typeof obj.text === 'string') {
-                                  safeName = obj.text
-                                } else if (typeof obj.label === 'string') {
-                                  safeName = obj.label
-                                } else if (obj.toString && typeof obj.toString === 'function') {
-                                  const toStringResult = obj.toString()
-                                  safeName = typeof toStringResult === 'string' ? toStringResult : String(toStringResult)
-                                } else {
-                                  // Last resort: use JSON.stringify but limit length
-                                  const jsonStr = JSON.stringify(subItemName)
-                                  safeName = jsonStr.length > 50 ? jsonStr.substring(0, 50) + '...' : jsonStr
-                                }
-                              } else {
-                                safeName = String(subItemName)
-                              }
-                            } else {
-                              safeName = String(subItemName)
-                            }
-                            
-                            // Final safety check - ensure it's a primitive string
-                            if (typeof safeName !== 'string') {
-                              const safeNameAny = safeName as any
-                              console.error('[AppSidebar] CRITICAL: safeName is still not a string after conversion!', {
-                                safeNameType: typeof safeName,
-                                safeNameValue: safeName,
-                                safeNameConstructor: safeNameAny?.constructor?.name,
-                              })
-                              safeName = '' // Force to empty string
-                            }
-                            
-                            // CRITICAL: Ensure safeName is a primitive string, not an object wrapper
-                            // React cannot render objects, so we must return a primitive string
-                            const finalName = typeof safeName === 'string' 
-                              ? safeName 
-                              : (safeName && typeof safeName === 'object' 
-                                  ? JSON.stringify(safeName).substring(0, 50)
-                                  : String(safeName || ''))
-                            
-                            console.log('[AppSidebar] Final safeName:', {
-                              safeNameType: typeof safeName,
-                              safeNameValue: safeName,
-                              safeNameStringified: typeof safeName === 'object' ? JSON.stringify(safeName) : safeName,
-                              finalNameType: typeof finalName,
-                              finalNameValue: finalName,
-                              finalNameLength: finalName?.length,
-                              finalNameIsPrimitive: typeof finalName === 'string',
-                            })
-                            
-                            // Final safety check - return empty string if still not a string
-                            if (typeof finalName !== 'string') {
-                              const finalNameAny = finalName as any
-                              console.error('[AppSidebar] CRITICAL ERROR: finalName is still not a string!', {
-                                finalNameType: typeof finalName,
-                                finalNameValue: finalName,
-                                finalNameConstructor: finalNameAny?.constructor?.name,
-                              })
-                              return '' // Return empty string as absolute fallback
-                            }
-                            
-                            return finalName
-                          })()}
+                          {ensureString(subItem.name)}
                             <span className="flex items-center gap-1 ml-auto">
                               {(() => {
                                 // Ensure subItem.new is a boolean, not an object
@@ -1039,14 +955,7 @@ const AppSidebar: React.FC = () => {
                 </p>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                   {(() => {
-                    const tenantName = tenant.name
-                    console.log('[AppSidebar] Rendering tenant.name:', {
-                      tenantNameType: typeof tenantName,
-                      tenantNameValue: tenantName,
-                      tenantNameIsString: typeof tenantName === 'string',
-                      tenant: tenant,
-                    })
-                    return typeof tenantName === 'string' ? tenantName : String(tenantName || '')
+                    return ensureString(tenant.name)
                   })()}
                 </p>
               </div>
