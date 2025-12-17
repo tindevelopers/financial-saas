@@ -34,7 +34,30 @@ export default function SignInPage() {
       if (signInError) {
         setError(signInError.message || "Invalid email or password")
       } else if (data.user) {
-        router.push("/dashboard")
+        // Check if user is admin and redirect accordingly
+        try {
+          const checkResponse = await fetch("/api/admin/check-access", {
+            credentials: "include",
+          })
+          
+          if (checkResponse.ok) {
+            // User is admin, redirect to admin subdomain
+            const adminUrl = new URL("/admin", window.location.origin)
+            adminUrl.hostname = `admin.${adminUrl.hostname.split('.').slice(1).join('.')}`
+            // If already on admin subdomain, just redirect to /admin
+            if (window.location.hostname.startsWith('admin.')) {
+              router.push("/admin")
+            } else {
+              window.location.href = adminUrl.toString()
+            }
+          } else {
+            // Regular user, go to dashboard
+            router.push("/dashboard")
+          }
+        } catch (error) {
+          // If check fails, default to dashboard
+          router.push("/dashboard")
+        }
         router.refresh()
       }
     } catch (error) {

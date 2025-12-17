@@ -75,15 +75,18 @@ export async function getCurrentUserWithTenant() {
     return null
   }
 
-  if (!userProfile.tenantId) {
+  // Platform Admins may not have a tenantId (global access)
+  const isPlatformAdmin = userProfile.role?.name === 'Platform Admin' || userProfile.role?.name === 'System Admin'
+  
+  if (!userProfile.tenantId && !isPlatformAdmin) {
     console.error('getCurrentUserWithTenant: User profile has no tenantId:', user.id)
     return null
   }
 
   return {
     ...user,
-    tenantId: userProfile.tenantId,
-    tenant: userProfile.tenant,
+    tenantId: userProfile.tenantId || null, // Allow null for Platform Admins
+    tenant: userProfile.tenant || null,
     fullName: userProfile.fullName,
     name: userProfile.fullName, // Keep 'name' for backward compatibility
     email: userProfile.email,
