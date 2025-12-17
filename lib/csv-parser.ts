@@ -127,11 +127,26 @@ function detectColumns(headers: string[]): {
 }
 
 export async function parseCSV(file: File): Promise<CSVParseResult> {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     const transactions: ParsedTransaction[] = []
     const errors: string[] = []
     
-    Papa.parse(file, {
+    // In Node.js/server environment, we need to read the file content first
+    // File.text() works in both browser and Node.js environments
+    let fileContent: string
+    try {
+      fileContent = await file.text()
+    } catch (error: any) {
+      errors.push(`Failed to read file: ${error?.message || 'Unknown error'}`)
+      resolve({
+        transactions: [],
+        rowCount: 0,
+        errors,
+      })
+      return
+    }
+    
+    Papa.parse(fileContent, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
