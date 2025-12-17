@@ -785,8 +785,8 @@ const AppSidebar: React.FC = () => {
                               : "menu-dropdown-item-inactive"
                           }`}
                         >
-                          <>
-                          <span>{typeof safeName === 'string' ? safeName : String(safeName || '')}</span>
+                          <span className="flex items-center justify-between w-full">
+                            <span>{typeof safeName === 'string' ? safeName : String(safeName || '')}</span>
                             <span className="flex items-center gap-1 ml-auto">
                               {(() => {
                                 // Ensure subItem.new is a boolean, not an object
@@ -835,7 +835,7 @@ const AppSidebar: React.FC = () => {
                                 ) : null
                               })()}
                             </span>
-                          </>
+                          </span>
                         </Link>
                       </li>
                     );
