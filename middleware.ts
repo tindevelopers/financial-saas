@@ -46,8 +46,11 @@ export async function middleware(request: NextRequest) {
     const pathname = url.pathname
     
     // Allow auth routes, API routes, and static assets
-    const allowedPaths = ['/auth', '/api', '/_next', '/favicon', '/admin']
+    const allowedPaths = ['/auth', '/api', '/_next', '/favicon']
     const isAllowedPath = allowedPaths.some(path => pathname.startsWith(path))
+    
+    // Admin routes are always allowed on admin subdomain
+    const isAdminRoute = pathname.startsWith('/admin')
     
     // If accessing root on admin subdomain, redirect to admin dashboard
     if (pathname === '/') {
@@ -56,13 +59,13 @@ export async function middleware(request: NextRequest) {
     }
     
     // If accessing user routes (dashboard, upload, transactions) on admin subdomain, redirect to admin
-    if (!isAllowedPath && (pathname.startsWith('/dashboard') || pathname.startsWith('/upload') || pathname.startsWith('/transactions'))) {
+    if (!isAdminRoute && !isAllowedPath && (pathname.startsWith('/dashboard') || pathname.startsWith('/upload') || pathname.startsWith('/transactions'))) {
       url.pathname = '/admin'
       return NextResponse.redirect(url)
     }
     
     // If not accessing /admin/* routes and not an allowed path, redirect to /admin
-    if (!pathname.startsWith('/admin') && !isAllowedPath) {
+    if (!isAdminRoute && !isAllowedPath) {
       url.pathname = '/admin'
       return NextResponse.redirect(url)
     }
