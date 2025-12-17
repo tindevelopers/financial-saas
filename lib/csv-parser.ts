@@ -235,7 +235,7 @@ export async function parseCSV(file: File): Promise<CSVParseResult> {
           errors,
         })
       },
-      error: (error) => {
+      error: (error: any) => {
         errors.push(`CSV parse error: ${error?.message || 'Unknown error'}`)
         resolve({
           transactions: [],
