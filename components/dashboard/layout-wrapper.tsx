@@ -34,9 +34,28 @@ export function DashboardLayoutWrapper({ children }: { children: React.ReactNode
           
           if (response.ok) {
             // User is admin but on regular domain, redirect to admin subdomain
-            const adminUrl = new URL("/admin", window.location.origin)
-            adminUrl.hostname = `admin.${adminUrl.hostname.split('.').slice(1).join('.')}`
-            window.location.href = adminUrl.toString()
+            const hostname = window.location.hostname
+            const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('localhost:')
+            
+            if (isLocalhost) {
+              // For localhost, just redirect to /admin on same domain
+              router.push("/admin")
+            } else {
+              // For production, redirect to admin subdomain
+              // Only construct admin subdomain if we have a proper domain (not Vercel preview URLs)
+              const parts = hostname.split('.')
+              if (parts.length >= 2 && !hostname.includes('vercel.app')) {
+                // Regular domain like fincat.tinconnect.com -> admin.fincat.tinconnect.com
+                const baseDomain = parts.slice(1).join('.')
+                const adminHostname = `admin.${baseDomain}`
+                const adminUrl = new URL("/admin", window.location.origin)
+                adminUrl.hostname = adminHostname
+                window.location.href = adminUrl.toString()
+              } else {
+                // Vercel preview or localhost - just redirect to /admin on same domain
+                router.push("/admin")
+              }
+            }
           }
         } catch (error) {
           // Ignore errors, user stays on regular dashboard

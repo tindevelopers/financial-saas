@@ -3,13 +3,24 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useSupabaseAuth } from "@/hooks/use-supabase-auth"
-import { AdminNav } from "@/components/admin/admin-nav"
+import { useSidebar } from "@/context/SidebarContext"
+import AppHeader from "@/layout/AppHeader"
+import AppSidebar from "@/layout/AppSidebar"
+import Backdrop from "@/layout/Backdrop"
+import { usePathname } from "next/navigation"
+import { SidebarProvider } from "@/context/SidebarContext"
+import { ThemeProvider } from "@/context/ThemeContext"
+import { TenantProvider } from "@/core/multi-tenancy/context"
+import { WorkspaceProvider } from "@/core/multi-tenancy/workspace-context"
+import { WhiteLabelProvider } from "@/context/WhiteLabelContext"
 
 export const dynamic = 'force-dynamic'
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, loading } = useSupabaseAuth()
   const router = useRouter()
+  const { isExpanded, isHovered, isMobileOpen } = useSidebar()
+  const pathname = usePathname()
 
   useEffect(() => {
     if (!loading) {
@@ -50,6 +61,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
   }
 
+  // Dynamic class for main content margin based on sidebar state
+  const mainContentMargin = isMobileOpen
+    ? "ml-0"
+    : isExpanded || isHovered
+    ? "xl:ml-[290px]"
+    : "xl:ml-[90px]"
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -63,15 +81,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-muted/40 md:block">
-        <div className="flex h-full max-h-screen flex-col gap-2">
-          <AdminNav />
+    <div className="min-h-screen xl:flex">
+      {/* Sidebar and Backdrop */}
+      <AppSidebar />
+      <Backdrop />
+      {/* Main Content Area */}
+      <div
+        className={`flex-1 transition-all duration-300 ease-in-out ${mainContentMargin}`}
+      >
+        {/* Header */}
+        <AppHeader />
+        {/* Page Content */}
+        <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+          {children}
         </div>
       </div>
-      <div className="flex flex-col">
-        <main className="flex-1">{children}</main>
-      </div>
     </div>
+  )
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarProvider>
+      <ThemeProvider>
+        <TenantProvider>
+          <WorkspaceProvider>
+            <WhiteLabelProvider>
+              <AdminLayoutContent>{children}</AdminLayoutContent>
+            </WhiteLabelProvider>
+          </WorkspaceProvider>
+        </TenantProvider>
+      </ThemeProvider>
+    </SidebarProvider>
   )
 }
