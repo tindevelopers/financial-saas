@@ -725,7 +725,17 @@ const AppSidebar: React.FC = () => {
                                           : "menu-dropdown-item-inactive"
                                       }`}
                                     >
-                                      {ensureString(nestedItem.name)}
+                                      {(() => {
+                                        const safeNestedName = ensureString(nestedItem.name)
+                                        if (typeof safeNestedName !== 'string') {
+                                          console.error('[AppSidebar] CRITICAL: safeNestedName is not a string!', {
+                                            safeNestedNameType: typeof safeNestedName,
+                                            safeNestedNameValue: safeNestedName,
+                                            nestedItemName: nestedItem.name,
+                                          })
+                                        }
+                                        return <span>{typeof safeNestedName === 'string' ? safeNestedName : String(safeNestedName || '')}</span>
+                                      })()}
                                     </Link>
                                   </li>
                                 );
@@ -740,13 +750,27 @@ const AppSidebar: React.FC = () => {
 
                   // Regular submenu item with path
                   if ('path' in subItem && subItem.path) {
+                    // CRITICAL: Ensure name is a string before rendering
+                    const safeName = ensureString(subItem.name)
+                    
                     // Log only if name is not a string (for debugging)
                     if (typeof subItem.name !== 'string') {
                       console.error('[AppSidebar] subItem.name is not a string:', {
                         nameType: typeof subItem.name,
                         nameValue: subItem.name,
                         nameStringified: typeof subItem.name === 'object' ? JSON.stringify(subItem.name) : subItem.name,
+                        safeNameType: typeof safeName,
+                        safeNameValue: safeName,
                         subItem: subItem,
+                      })
+                    }
+                    
+                    // Double-check safeName is actually a string
+                    if (typeof safeName !== 'string') {
+                      console.error('[AppSidebar] CRITICAL: safeName is not a string after ensureString!', {
+                        safeNameType: typeof safeName,
+                        safeNameValue: safeName,
+                        subItemName: subItem.name,
                       })
                     }
                     
@@ -762,7 +786,7 @@ const AppSidebar: React.FC = () => {
                           }`}
                         >
                           <>
-                          {ensureString(subItem.name)}
+                          <span>{typeof safeName === 'string' ? safeName : String(safeName || '')}</span>
                             <span className="flex items-center gap-1 ml-auto">
                               {(() => {
                                 // Ensure subItem.new is a boolean, not an object
