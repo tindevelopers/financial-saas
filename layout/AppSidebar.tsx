@@ -405,6 +405,31 @@ const AppSidebar: React.FC = () => {
   const pathname = usePathname();
   const { tenant, isLoading: isTenantLoading } = useTenant();
   const { branding } = useWhiteLabel();
+
+  // Log component mount and data
+  useEffect(() => {
+    console.log('[AppSidebar] Component mounted')
+    console.log('[AppSidebar] Initial data:', {
+      tenantType: typeof tenant,
+      tenant: tenant,
+      tenantNameType: typeof tenant?.name,
+      tenantNameValue: tenant?.name,
+      brandingType: typeof branding,
+      branding: branding,
+      navItemsCount: navItems.length,
+    })
+  }, [])
+
+  // Log tenant changes
+  useEffect(() => {
+    console.log('[AppSidebar] Tenant changed:', {
+      tenantType: typeof tenant,
+      tenant: tenant,
+      tenantNameType: typeof tenant?.name,
+      tenantNameValue: tenant?.name,
+      isTenantLoading,
+    })
+  }, [tenant, isTenantLoading])
   
   const logoUrl = branding.logo || "/images/logo/logo.svg";
   const logoDarkUrl = branding.logo || "/images/logo/logo-dark.svg";
