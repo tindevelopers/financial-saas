@@ -109,60 +109,77 @@ export async function POST(request: NextRequest) {
       throw dbError
     }
     
-    // Step 5: Create transaction records
+    // Step 5: Create transaction records (bulk insert for performance)
     step = 'create_transactions'
-    console.log('[UPLOAD] Step 5: Creating transaction records...')
-    const createdTransactions = []
-    let transactionIndex = 0
+    console.log('[UPLOAD] Step 5: Creating transaction records (bulk insert)...')
+    console.log(`[UPLOAD] Preparing ${parseResult.transactions.length} transactions for bulk insert`)
     
-    for (const tx of parseResult.transactions) {
-      try {
-        const transaction = await prisma.transaction.create({
-          data: {
-            tenantId,
-            uploadId: upload.id,
-            date: tx.date,
-            description: tx.description,
-            payerPayee: tx.payerPayee,
-            reference: tx.reference,
-            paidIn: tx.paidIn !== undefined ? tx.paidIn.toString() : null,
-            paidOut: tx.paidOut !== undefined ? tx.paidOut.toString() : null,
-            amount: tx.amount.toString(),
-            currency: 'GBP',
-            originalCategory: tx.originalCategory,
-            originalSubCategory: tx.originalSubCategory,
-            transactionType: tx.transactionType,
-            metadata: tx.metadata || {},
-            status: 'pending',
-            needsReview: false,
-          },
-        })
-        createdTransactions.push(transaction)
-        transactionIndex++
+    // Prepare data for bulk insert
+    const transactionData = parseResult.transactions.map(tx => ({
+      tenantId,
+      uploadId: upload.id,
+      date: tx.date,
+      description: tx.description,
+      payerPayee: tx.payerPayee || null,
+      reference: tx.reference || null,
+      paidIn: tx.paidIn !== undefined ? tx.paidIn.toString() : null,
+      paidOut: tx.paidOut !== undefined ? tx.paidOut.toString() : null,
+      amount: tx.amount.toString(),
+      currency: 'GBP',
+      originalCategory: tx.originalCategory || null,
+      originalSubCategory: tx.originalSubCategory || null,
+      transactionType: tx.transactionType || null,
+      metadata: tx.metadata || {},
+      status: 'pending' as const,
+      needsReview: false,
+    }))
+    
+    let createdCount = 0
+    try {
+      // Use createMany for bulk insert (much faster than individual creates)
+      // Note: createMany doesn't return the created records, but we can count them
+      const result = await prisma.transaction.createMany({
+        data: transactionData,
+        skipDuplicates: true, // Skip duplicates if any
+      })
+      createdCount = result.count
+      console.log('[UPLOAD] ✅ Bulk insert completed:', {
+        created: createdCount,
+        expected: parseResult.transactions.length,
+      })
+    } catch (bulkError: any) {
+      console.error('[UPLOAD] ❌ Bulk insert failed, falling back to individual inserts:', {
+        error: bulkError.message,
+        code: bulkError.code,
+      })
+      
+      // Fallback: try individual inserts in smaller batches
+      const batchSize = 50
+      let successCount = 0
+      
+      for (let i = 0; i < transactionData.length; i += batchSize) {
+        const batch = transactionData.slice(i, i + batchSize)
+        console.log(`[UPLOAD] Processing batch ${Math.floor(i / batchSize) + 1} (${batch.length} transactions)`)
         
-        // Log progress every 10 transactions
-        if (transactionIndex % 10 === 0) {
-          console.log(`[UPLOAD] Progress: ${transactionIndex}/${parseResult.transactions.length} transactions created`)
+        for (const data of batch) {
+          try {
+            await prisma.transaction.create({ data })
+            successCount++
+          } catch (txError: any) {
+            console.error(`[UPLOAD] ❌ Failed to create transaction:`, {
+              error: txError.message,
+              description: data.description?.substring(0, 50),
+            })
+          }
         }
-      } catch (txError: any) {
-        console.error(`[UPLOAD] ❌ Failed to create transaction ${transactionIndex}:`, {
-          error: txError.message,
-          code: txError.code,
-          transactionData: {
-            date: tx.date,
-            description: tx.description?.substring(0, 50),
-            amount: tx.amount,
-          },
-        })
-        // Continue with other transactions even if one fails
       }
+      
+      createdCount = successCount
+      console.log('[UPLOAD] ✅ Fallback insert completed:', {
+        created: createdCount,
+        expected: parseResult.transactions.length,
+      })
     }
-    
-    console.log('[UPLOAD] ✅ Transactions created:', {
-      total: createdTransactions.length,
-      expected: parseResult.transactions.length,
-      failed: parseResult.transactions.length - createdTransactions.length,
-    })
     
     // Step 6: Update upload status
     step = 'update_upload_status'
@@ -172,7 +189,7 @@ export async function POST(request: NextRequest) {
         where: { id: upload.id },
         data: {
           status: 'completed',
-          processedCount: createdTransactions.length,
+          processedCount: createdCount,
         },
       })
       console.log('[UPLOAD] ✅ Upload status updated to completed')
@@ -187,14 +204,14 @@ export async function POST(request: NextRequest) {
     const duration = Date.now() - startTime
     console.log('[UPLOAD] ===== Upload completed successfully =====', {
       uploadId: upload.id,
-      transactionsCreated: createdTransactions.length,
+      transactionsCreated: createdCount,
       errors: parseResult.errors.length,
       duration: `${duration}ms`,
     })
     
     return NextResponse.json({
       uploadId: upload.id,
-      transactionsCreated: createdTransactions.length,
+      transactionsCreated: createdCount,
       errors: parseResult.errors,
     })
   } catch (error: any) {
