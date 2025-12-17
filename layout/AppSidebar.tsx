@@ -786,14 +786,35 @@ const AppSidebar: React.FC = () => {
                               safeName = '' // Force to empty string
                             }
                             
+                            // CRITICAL: Ensure safeName is a primitive string, not an object wrapper
+                            // React cannot render objects, so we must return a primitive string
+                            const finalName = typeof safeName === 'string' 
+                              ? safeName 
+                              : (safeName && typeof safeName === 'object' 
+                                  ? JSON.stringify(safeName).substring(0, 50)
+                                  : String(safeName || ''))
+                            
                             console.log('[AppSidebar] Final safeName:', {
                               safeNameType: typeof safeName,
                               safeNameValue: safeName,
-                              safeNameLength: safeName?.length,
-                              safeNameIsPrimitive: typeof safeName === 'string' && safeName !== null && safeName !== undefined,
+                              safeNameStringified: typeof safeName === 'object' ? JSON.stringify(safeName) : safeName,
+                              finalNameType: typeof finalName,
+                              finalNameValue: finalName,
+                              finalNameLength: finalName?.length,
+                              finalNameIsPrimitive: typeof finalName === 'string',
                             })
                             
-                            return safeName
+                            // Final safety check - return empty string if still not a string
+                            if (typeof finalName !== 'string') {
+                              console.error('[AppSidebar] CRITICAL ERROR: finalName is still not a string!', {
+                                finalNameType: typeof finalName,
+                                finalNameValue: finalName,
+                                finalNameConstructor: finalName?.constructor?.name,
+                              })
+                              return '' // Return empty string as absolute fallback
+                            }
+                            
+                            return finalName
                           })()}
                             <span className="flex items-center gap-1 ml-auto">
                               {(() => {
