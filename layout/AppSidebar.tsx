@@ -556,17 +556,7 @@ const AppSidebar: React.FC = () => {
   ) => (
     <ul className="flex flex-col gap-1">
       {navItems.map((nav, index) => (
-        <li key={(() => {
-          const keyValue = nav.name
-          if (typeof keyValue !== 'string') {
-            console.error('[AppSidebar] nav.name used as key is not a string!', {
-              keyValueType: typeof keyValue,
-              keyValue: keyValue,
-              nav: nav,
-            })
-          }
-          return typeof keyValue === 'string' ? keyValue : String(keyValue || `nav-${index}`)
-        })()}>
+        <li key={ensureString(nav.name) || `nav-${index}`}>
           {nav.subItems ? (
             <button
               onClick={() => handleSubmenuToggle(index, menuType)}
