@@ -55,45 +55,54 @@ export async function getCurrentUser() {
 
 // Get current user with tenant info
 export async function getCurrentUserWithTenant() {
-  const user = await getCurrentUser()
-  if (!user) {
-    console.error('getCurrentUserWithTenant: No user from getCurrentUser')
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      console.error('getCurrentUserWithTenant: No user from getCurrentUser')
+      return null
+    }
+
+    const { prisma } = await import('./db')
+    const userProfile = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: { 
+        tenant: true,
+        role: true, // Include role to check admin status
+      },
+    })
+
+    if (!userProfile) {
+      console.error('getCurrentUserWithTenant: No user profile found for user:', user.id)
+      return null
+    }
+
+    // Platform Admins may not have a tenantId (global access)
+    const isPlatformAdmin = userProfile.role?.name === 'Platform Admin' || userProfile.role?.name === 'System Admin'
+    
+    if (!userProfile.tenantId && !isPlatformAdmin) {
+      console.error('getCurrentUserWithTenant: User profile has no tenantId:', user.id)
+      return null
+    }
+
+    return {
+      ...user,
+      tenantId: userProfile.tenantId || null, // Allow null for Platform Admins
+      tenant: userProfile.tenant || null,
+      fullName: userProfile.fullName || '',
+      name: userProfile.fullName || '', // Keep 'name' for backward compatibility
+      email: userProfile.email || user.email || '',
+      roleId: userProfile.roleId || null,
+      roleName: userProfile.role?.name || null,
+      plan: userProfile.plan || null,
+      status: userProfile.status || 'active',
+    }
+  } catch (error: any) {
+    console.error('getCurrentUserWithTenant error:', {
+      error: error?.message || String(error),
+      stack: error?.stack,
+      errorType: typeof error,
+    })
     return null
-  }
-
-  const { prisma } = await import('./db')
-  const userProfile = await prisma.user.findUnique({
-    where: { id: user.id },
-    include: { 
-      tenant: true,
-      role: true, // Include role to check admin status
-    },
-  })
-
-  if (!userProfile) {
-    console.error('getCurrentUserWithTenant: No user profile found for user:', user.id)
-    return null
-  }
-
-  // Platform Admins may not have a tenantId (global access)
-  const isPlatformAdmin = userProfile.role?.name === 'Platform Admin' || userProfile.role?.name === 'System Admin'
-  
-  if (!userProfile.tenantId && !isPlatformAdmin) {
-    console.error('getCurrentUserWithTenant: User profile has no tenantId:', user.id)
-    return null
-  }
-
-  return {
-    ...user,
-    tenantId: userProfile.tenantId || null, // Allow null for Platform Admins
-    tenant: userProfile.tenant || null,
-    fullName: userProfile.fullName,
-    name: userProfile.fullName, // Keep 'name' for backward compatibility
-    email: userProfile.email,
-    roleId: userProfile.roleId,
-    roleName: userProfile.role?.name || null,
-    plan: userProfile.plan,
-    status: userProfile.status,
   }
 }
 

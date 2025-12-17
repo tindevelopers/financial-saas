@@ -492,7 +492,18 @@ const AppSidebar: React.FC = () => {
                     : "menu-item-icon-inactive"
                 }`}
               >
-                {nav.icon}
+                {(() => {
+                  // Ensure icon is a valid React element, not an object
+                  if (nav.icon && (React.isValidElement(nav.icon) || typeof nav.icon === 'string' || typeof nav.icon === 'number')) {
+                    return nav.icon
+                  }
+                  console.error('[AppSidebar] nav.icon is not a valid React element!', {
+                    iconType: typeof nav.icon,
+                    icon: nav.icon,
+                    nav: nav,
+                  })
+                  return null
+                })()}
               </span>
               {(isExpanded || isHovered || isMobileOpen) && (
                 <span className={`menu-item-text`}>
@@ -547,7 +558,18 @@ const AppSidebar: React.FC = () => {
                       : "menu-item-icon-inactive"
                   }`}
                 >
-                  {nav.icon}
+                  {(() => {
+                    // Ensure icon is a valid React element, not an object
+                    if (nav.icon && (React.isValidElement(nav.icon) || typeof nav.icon === 'string' || typeof nav.icon === 'number')) {
+                      return nav.icon
+                    }
+                    console.error('[AppSidebar] nav.icon is not a valid React element!', {
+                      iconType: typeof nav.icon,
+                      icon: nav.icon,
+                      nav: nav,
+                    })
+                    return null
+                  })()}
                 </span>
                 {(isExpanded || isHovered || isMobileOpen) && (
                   <span className={`menu-item-text`}>
@@ -857,12 +879,12 @@ const AppSidebar: React.FC = () => {
               />
             </>
           ) : (
-            <Image
-              src={logoIconUrl}
-              alt={branding.companyName || "Logo"}
-              width={32}
-              height={32}
-            />
+              <Image
+                src={logoIconUrl}
+                alt={typeof branding?.companyName === 'string' ? branding.companyName : "Logo"}
+                width={32}
+                height={32}
+              />
           )}
         </Link>
         {/* Tenant Context Badge */}
