@@ -20,13 +20,13 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         features: true,
-        metadata: true,
       },
     })
     
-    // Get custom instructions from tenant metadata
-    const metadata = (tenant as any)?.metadata || {}
-    const customInstructions = metadata.aiInstructions || null
+    // TODO: Add metadata field to Tenant model or create tenant_settings table
+    // For now, custom instructions are not persisted
+    // They can be passed per request to /api/categorize
+    const customInstructions = null
     
     return NextResponse.json({
       customInstructions,
