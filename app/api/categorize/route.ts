@@ -28,8 +28,27 @@ export async function POST(request: NextRequest) {
         (tenant as any).aiInstructions : null) ||
       'Analyze transaction descriptions carefully. Consider UK business context, common merchant names, and transaction patterns.'
     
-    // Get ALL transactions for this upload (not just 100)
-    // Process in batches to avoid timeout, but get count first
+    // Get transactions for this batch (or all if no batch specified)
+    const batchSize = 50
+    const currentBatch = batchNumber || 1
+    const skip = (currentBatch - 1) * batchSize
+    
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        tenantId,
+        uploadId,
+        status: 'pending',
+      },
+      take: batchSize,
+      skip: skip,
+      orderBy: { date: 'asc' },
+    })
+    
+    if (transactions.length === 0) {
+      return NextResponse.json({ message: 'No transactions to categorize' })
+    }
+    
+    // Get total count for progress tracking
     const totalCount = await prisma.transaction.count({
       where: {
         tenantId,
@@ -38,26 +57,7 @@ export async function POST(request: NextRequest) {
       },
     })
     
-    if (totalCount === 0) {
-      return NextResponse.json({ message: 'No transactions to categorize' })
-    }
-    
-    // Process in batches of 50 for better reliability
-    const batchSize = 50
-    const totalBatches = Math.ceil(totalCount / batchSize)
-    
-    console.log(`[CATEGORIZE] Processing ${totalCount} transactions in ${totalBatches} batches`)
-    
-    // Get first batch
-    const transactions = await prisma.transaction.findMany({
-      where: {
-        tenantId,
-        uploadId,
-        status: 'pending',
-      },
-      take: batchSize,
-      orderBy: { date: 'asc' },
-    })
+    console.log(`[CATEGORIZE] Processing batch ${currentBatch}: ${transactions.length} transactions (${totalCount - skip} remaining)`)
     
     // Get categories for this tenant
     const categories = await prisma.category.findMany({

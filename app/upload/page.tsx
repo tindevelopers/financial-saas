@@ -103,68 +103,97 @@ export default function UploadPage() {
 
       setStatus("categorizing")
 
-      // Start AI categorization
-      const categorizeResponse = await fetch("/api/categorize", {
-        method: "POST",
-        credentials: "include", // Include cookies for authentication
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uploadId: uploadData.uploadId }),
-      })
-
-      if (!categorizeResponse.ok) {
-        throw new Error("Categorization failed")
-      }
-
-      // Handle streaming response
-      const reader = categorizeResponse.body?.getReader()
-      if (!reader) {
-        throw new Error("No reader available")
-      }
-
-      const decoder = new TextDecoder()
-      let buffer = ""
-      let partialRead = ""
+      // Process categorization in batches until all transactions are categorized
+      let batchNumber = 1
+      let totalCategorized = 0
+      let totalNeedsReview = 0
 
       while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
+        // Start AI categorization for this batch
+        const categorizeResponse = await fetch("/api/categorize", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            uploadId: uploadData.uploadId,
+            batchNumber: batchNumber,
+          }),
+        })
 
-        partialRead += decoder.decode(value, { stream: true })
-        let lines = partialRead.split("\n")
-        partialRead = lines.pop() || ""
+        if (!categorizeResponse.ok) {
+          throw new Error("Categorization failed")
+        }
 
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const data = line.slice(6)
-            if (data === "[DONE]") {
-              setStatus("completed")
-              toast({
-                title: "Success!",
-                description: "Transactions categorized successfully",
-              })
-              return
-            }
+        // Handle streaming response
+        const reader = categorizeResponse.body?.getReader()
+        if (!reader) {
+          throw new Error("No reader available")
+        }
 
-            try {
-              const parsed = JSON.parse(data)
-              if (parsed.status === "completed") {
-                setStatus("completed")
-                toast({
-                  title: "Success!",
-                  description: `${parsed.result?.categorized || 0} transactions categorized`,
-                })
-                return
-              } else if (parsed.status === "error") {
-                throw new Error(parsed.message || "Categorization failed")
+        const decoder = new TextDecoder()
+        let buffer = ""
+        let partialRead = ""
+        let batchCompleted = false
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          partialRead += decoder.decode(value, { stream: true })
+          let lines = partialRead.split("\n")
+          partialRead = lines.pop() || ""
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const data = line.slice(6)
+              if (data === "[DONE]") {
+                batchCompleted = true
+                break
               }
-            } catch (e) {
-              // Skip invalid JSON
+
+              try {
+                const parsed = JSON.parse(data)
+                if (parsed.status === "completed" || parsed.status === "batch_completed") {
+                  totalCategorized += parsed.result?.categorized || 0
+                  totalNeedsReview += parsed.result?.needsReview || 0
+                  
+                  if (parsed.status === "completed" || parsed.result?.remaining === 0) {
+                    // All batches complete
+                    setStatus("completed")
+                    toast({
+                      title: "Success!",
+                      description: `${totalCategorized} transactions categorized (${totalNeedsReview} need review)`,
+                    })
+                    return
+                  } else {
+                    // More batches to process
+                    batchNumber++
+                    batchCompleted = true
+                    break
+                  }
+                } else if (parsed.status === "error") {
+                  throw new Error(parsed.message || "Categorization failed")
+                }
+              } catch (e) {
+                // Skip invalid JSON
+              }
             }
           }
+          
+          if (batchCompleted) break
+        }
+        
+        if (!batchCompleted) {
+          // Stream ended without completion, assume done
+          break
         }
       }
 
       setStatus("completed")
+      toast({
+        title: "Categorization complete",
+        description: `${totalCategorized} transactions processed`,
+      })
     } catch (error: any) {
       console.error("Upload error:", error)
       setStatus("error")
