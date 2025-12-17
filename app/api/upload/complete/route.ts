@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     // Step 4: Create upload record
     step = 'create_upload_record'
     console.log('[UPLOAD] Step 4: Creating upload record in database...')
-    let upload
+    let upload: Awaited<ReturnType<typeof prisma.upload.create>>
     try {
       upload = await prisma.upload.create({
         data: {
