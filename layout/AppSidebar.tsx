@@ -520,18 +520,29 @@ const AppSidebar: React.FC = () => {
                   })()}
                 </span>
               )}
-              {nav.new && (isExpanded || isHovered || isMobileOpen) && (
-                <span
-                  className={`ml-auto absolute right-10 ${
-                    openSubmenu?.type === menuType &&
-                    openSubmenu?.index === index
-                      ? "menu-dropdown-badge-active"
-                      : "menu-dropdown-badge-inactive"
-                  } menu-dropdown-badge`}
-                >
-                  new
-                </span>
-              )}
+              {(() => {
+                // Ensure nav.new is a boolean, not an object
+                const isNew = typeof nav.new === 'boolean' ? nav.new : false
+                if (nav.new && typeof nav.new !== 'boolean') {
+                  console.error('[AppSidebar] nav.new is not a boolean!', {
+                    newType: typeof nav.new,
+                    newValue: nav.new,
+                    nav: nav,
+                  })
+                }
+                return isNew && (isExpanded || isHovered || isMobileOpen) ? (
+                  <span
+                    className={`ml-auto absolute right-10 ${
+                      openSubmenu?.type === menuType &&
+                      openSubmenu?.index === index
+                        ? "menu-dropdown-badge-active"
+                        : "menu-dropdown-badge-inactive"
+                    } menu-dropdown-badge`}
+                  >
+                    new
+                  </span>
+                ) : null
+              })()}
               {(isExpanded || isHovered || isMobileOpen) && nav.subItems && (
                 <ChevronDownIcon
                   className={`ml-auto w-5 h-5 transition-transform duration-200  ${
@@ -702,28 +713,50 @@ const AppSidebar: React.FC = () => {
                             return typeof subItemName === 'string' ? subItemName : String(subItemName || '')
                           })()}
                           <span className="flex items-center gap-1 ml-auto">
-                            {subItem.new && (
-                              <span
-                                className={`ml-auto ${
-                                  isActive(subItem.path)
-                                    ? "menu-dropdown-badge-active"
-                                    : "menu-dropdown-badge-inactive"
-                                } menu-dropdown-badge `}
-                              >
-                                new
-                              </span>
-                            )}
-                            {subItem.pro && (
-                              <span
-                                className={`ml-auto ${
-                                  isActive(subItem.path)
-                                    ? "menu-dropdown-badge-pro-active"
-                                    : "menu-dropdown-badge-pro-inactive"
-                                } menu-dropdown-badge-pro `}
-                              >
-                                pro
-                              </span>
-                            )}
+                            {(() => {
+                              // Ensure subItem.new is a boolean, not an object
+                              const isNew = typeof subItem.new === 'boolean' ? subItem.new : false
+                              if (subItem.new && typeof subItem.new !== 'boolean') {
+                                console.error('[AppSidebar] subItem.new is not a boolean!', {
+                                  newType: typeof subItem.new,
+                                  newValue: subItem.new,
+                                  subItem: subItem,
+                                })
+                              }
+                              return isNew ? (
+                                <span
+                                  className={`ml-auto ${
+                                    isActive(subItem.path)
+                                      ? "menu-dropdown-badge-active"
+                                      : "menu-dropdown-badge-inactive"
+                                  } menu-dropdown-badge `}
+                                >
+                                  new
+                                </span>
+                              ) : null
+                            })()}
+                            {(() => {
+                              // Ensure subItem.pro is a boolean, not an object
+                              const isPro = typeof subItem.pro === 'boolean' ? subItem.pro : false
+                              if (subItem.pro && typeof subItem.pro !== 'boolean') {
+                                console.error('[AppSidebar] subItem.pro is not a boolean!', {
+                                  proType: typeof subItem.pro,
+                                  proValue: subItem.pro,
+                                  subItem: subItem,
+                                })
+                              }
+                              return isPro ? (
+                                <span
+                                  className={`ml-auto ${
+                                    isActive(subItem.path)
+                                      ? "menu-dropdown-badge-pro-active"
+                                      : "menu-dropdown-badge-pro-inactive"
+                                  } menu-dropdown-badge-pro `}
+                                >
+                                  pro
+                                </span>
+                              ) : null
+                            })()}
                           </span>
                         </Link>
                       </li>
