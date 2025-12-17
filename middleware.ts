@@ -2,6 +2,12 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  // Detect subdomain
+  const hostname = request.headers.get('host') || ''
+  const subdomain = hostname.split('.')[0]
+  const isAdminSubdomain = subdomain === 'admin'
+  
+  // Refresh Supabase session
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -28,13 +34,39 @@ export async function middleware(request: NextRequest) {
   )
 
   // Refresh session if expired - required for Server Components
-  // https://supabase.com/docs/guides/auth/server-side/nextjs
-  // Use getSession() to refresh the session and update cookies
   const { data: { session } } = await supabase.auth.getSession()
   
-  // If we have a session, verify the user is still valid
   if (session) {
     await supabase.auth.getUser()
+  }
+
+  // Handle admin subdomain routing
+  if (isAdminSubdomain) {
+    const url = request.nextUrl.clone()
+    const pathname = url.pathname
+    
+    // If accessing root on admin subdomain, redirect to admin dashboard
+    if (pathname === '/') {
+      url.pathname = '/admin'
+      return NextResponse.redirect(url)
+    }
+    
+    // If not accessing /admin/* routes, redirect to /admin
+    if (!pathname.startsWith('/admin') && !pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
+      url.pathname = '/admin'
+      return NextResponse.redirect(url)
+    }
+    
+    // Add header to indicate admin subdomain
+    supabaseResponse.headers.set('x-admin-subdomain', 'true')
+  } else {
+    // On regular domain, redirect /admin routes to admin subdomain if configured
+    const pathname = request.nextUrl.pathname
+    if (pathname.startsWith('/admin') && process.env.ADMIN_SUBDOMAIN) {
+      const adminUrl = new URL(request.url)
+      adminUrl.hostname = `admin.${hostname.split('.').slice(1).join('.')}`
+      return NextResponse.redirect(adminUrl)
+    }
   }
 
   return supabaseResponse

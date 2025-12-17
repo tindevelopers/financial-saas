@@ -64,7 +64,10 @@ export async function getCurrentUserWithTenant() {
   const { prisma } = await import('./db')
   const userProfile = await prisma.user.findUnique({
     where: { id: user.id },
-    include: { tenant: true },
+    include: { 
+      tenant: true,
+      role: true, // Include role to check admin status
+    },
   })
 
   if (!userProfile) {
@@ -85,6 +88,7 @@ export async function getCurrentUserWithTenant() {
     name: userProfile.fullName, // Keep 'name' for backward compatibility
     email: userProfile.email,
     roleId: userProfile.roleId,
+    roleName: userProfile.role?.name || null,
     plan: userProfile.plan,
     status: userProfile.status,
   }
