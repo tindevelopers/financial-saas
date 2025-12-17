@@ -24,7 +24,14 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
-    return NextResponse.json({ tenants })
+    // Serialize Date objects to ISO strings to prevent React rendering errors
+    const serializedTenants = tenants.map(tenant => ({
+      ...tenant,
+      createdAt: tenant.createdAt.toISOString(),
+      updatedAt: tenant.updatedAt.toISOString(),
+    }))
+
+    return NextResponse.json({ tenants: serializedTenants })
   } catch (error: any) {
     console.error('Admin tenants error:', error)
     return NextResponse.json(

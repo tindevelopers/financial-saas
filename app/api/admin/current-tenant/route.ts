@@ -27,7 +27,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(null)
     }
 
-    return NextResponse.json(tenant)
+    // Serialize Date objects to ISO strings to prevent React rendering errors
+    return NextResponse.json({
+      ...tenant,
+      createdAt: tenant.createdAt.toISOString(),
+      updatedAt: tenant.updatedAt.toISOString(),
+    })
   } catch (error: any) {
     console.error('Get current tenant error:', error)
     return NextResponse.json(
@@ -36,3 +41,4 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+

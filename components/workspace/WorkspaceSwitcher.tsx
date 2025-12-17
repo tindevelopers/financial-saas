@@ -4,3 +4,4 @@
 export default function WorkspaceSwitcher({ className }: { className?: string }) {
   return null
 }
+

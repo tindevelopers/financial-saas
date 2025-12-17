@@ -20,7 +20,14 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
-    return NextResponse.json({ users })
+    // Serialize Date objects to ISO strings to prevent React rendering errors
+    const serializedUsers = users.map(user => ({
+      ...user,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    }))
+
+    return NextResponse.json({ users: serializedUsers })
   } catch (error: any) {
     console.error('Admin users error:', error)
     return NextResponse.json(

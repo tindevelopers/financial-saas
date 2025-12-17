@@ -22,7 +22,7 @@ interface Tenant {
   status: string
   plan: string
   createdAt: string
-  _count: {
+  _count?: {
     users: number
     transactions: number
   }
@@ -104,8 +104,8 @@ export default function AdminTenantsPage() {
                     <TableCell>
                       <Badge variant="outline">{tenant.plan}</Badge>
                     </TableCell>
-                    <TableCell>{tenant._count.users}</TableCell>
-                    <TableCell>{tenant._count.transactions}</TableCell>
+                    <TableCell>{tenant._count?.users ?? 0}</TableCell>
+                    <TableCell>{tenant._count?.transactions ?? 0}</TableCell>
                     <TableCell>
                       {new Date(tenant.createdAt).toLocaleDateString()}
                     </TableCell>

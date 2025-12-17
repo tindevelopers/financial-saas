@@ -45,8 +45,9 @@ export function AdminNav() {
   const handleSignOut = async () => {
     await signOut()
     // Redirect to regular domain signin
+    // Remove admin subdomain: admin.fincat.tinconnect.com -> fincat.tinconnect.com
     const signinUrl = new URL('/auth/signin', window.location.origin)
-    signinUrl.hostname = signinUrl.hostname.replace('admin.', '')
+    signinUrl.hostname = signinUrl.hostname.replace(/^admin\./, '')
     window.location.href = signinUrl.toString()
   }
 

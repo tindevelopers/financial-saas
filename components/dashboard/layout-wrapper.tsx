@@ -43,11 +43,9 @@ export function DashboardLayoutWrapper({ children }: { children: React.ReactNode
             } else {
               // For production, redirect to admin subdomain
               // Only construct admin subdomain if we have a proper domain (not Vercel preview URLs)
-              const parts = hostname.split('.')
-              if (parts.length >= 2 && !hostname.includes('vercel.app')) {
+              if (!hostname.includes('vercel.app') && !hostname.includes('localhost')) {
                 // Regular domain like fincat.tinconnect.com -> admin.fincat.tinconnect.com
-                const baseDomain = parts.slice(1).join('.')
-                const adminHostname = `admin.${baseDomain}`
+                const adminHostname = `admin.${hostname}`
                 const adminUrl = new URL("/admin", window.location.origin)
                 adminUrl.hostname = adminHostname
                 window.location.href = adminUrl.toString()

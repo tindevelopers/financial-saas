@@ -1,7 +1,7 @@
 # Admin Panel Fix Summary
 
 ## Issue
-When logging in with `systemadmin@tin.info`, the admin panel was not accessible. The production URL `admin.tinconnect.com/admin` showed a 404 error.
+When logging in with `systemadmin@tin.info`, the admin panel was not accessible. The production URL `admin.fincat.tinconnect.com/admin` showed a 404 error.
 
 ## Root Cause
 1. **Route Conflict**: Next.js was resolving `/admin` route from `node_modules/@tindeveloper/tinadmin-saas-base/src/app/admin/page.tsx` which redirects to `/saas/dashboard` instead of our local `/app/admin/page.tsx` which redirects to `/admin/dashboard`.
@@ -42,7 +42,7 @@ The code has been committed and pushed to master. Vercel will automatically rede
 
 1. **Check Vercel Domain Configuration**:
    - Go to Vercel Dashboard → Project Settings → Domains
-   - Ensure `admin.tinconnect.com` is added and pointing to the same deployment
+   - Ensure `admin.fincat.tinconnect.com` is added and pointing to the same deployment
    - Verify DNS records are correct
 
 2. **Verify Deployment**:
@@ -62,3 +62,4 @@ The code has been committed and pushed to master. Vercel will automatically rede
 ✅ **Code**: Committed and pushed to master
 
 The admin panel should now work correctly once Vercel redeploys.
+

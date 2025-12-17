@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  // Detect subdomain
+  // Detect admin subdomain (e.g., admin.fincat.tinconnect.com)
   const hostname = request.headers.get('host') || ''
   const subdomain = hostname.split('.')[0]
   const isAdminSubdomain = subdomain === 'admin'
@@ -73,13 +73,24 @@ export async function middleware(request: NextRequest) {
     // Add header to indicate admin subdomain
     supabaseResponse.headers.set('x-admin-subdomain', 'true')
   } else {
-    // On regular domain, redirect /admin routes to admin subdomain if configured
+    // On regular domain (e.g., fincat.tinconnect.com)
     const pathname = request.nextUrl.pathname
-    if (pathname.startsWith('/admin') && process.env.ADMIN_SUBDOMAIN) {
-      const adminUrl = new URL(request.url)
-      adminUrl.hostname = `admin.${hostname.split('.').slice(1).join('.')}`
-      return NextResponse.redirect(adminUrl)
+    
+    // Only redirect to admin subdomain if explicitly enabled via environment variable
+    // Otherwise, allow /admin routes on main domain (works as fallback)
+    if (pathname.startsWith('/admin') && process.env.ENABLE_ADMIN_SUBDOMAIN === 'true') {
+      const isProduction = !hostname.includes('localhost') && 
+                          !hostname.includes('127.0.0.1') && 
+                          !hostname.includes('vercel.app')
+      
+      if (isProduction) {
+        // Redirect to admin subdomain (only if ENABLE_ADMIN_SUBDOMAIN is set)
+        const adminUrl = new URL(request.url)
+        adminUrl.hostname = `admin.${hostname}`
+        return NextResponse.redirect(adminUrl)
+      }
     }
+    // If ENABLE_ADMIN_SUBDOMAIN is not set, /admin routes work on main domain
   }
 
   return supabaseResponse

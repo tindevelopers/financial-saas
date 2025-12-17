@@ -18,3 +18,4 @@ export default function TenantSwitcher({ className }: { className?: string }) {
     </Button>
   )
 }
+

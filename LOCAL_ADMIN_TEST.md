@@ -75,3 +75,4 @@ If you want to use a **local Supabase instance** instead of production:
 - Check middleware routing logic
 - Verify admin subdomain detection
 - Check browser console for errors
+

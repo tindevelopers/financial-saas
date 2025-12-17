@@ -47,16 +47,16 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       
       if (!response.ok) {
         // Not an admin, redirect to user dashboard
-        // Use regular domain, not admin subdomain
+        // Remove admin subdomain: admin.fincat.tinconnect.com -> fincat.tinconnect.com
         const userUrl = new URL('/dashboard', window.location.origin)
-        userUrl.hostname = userUrl.hostname.replace('admin.', '')
+        userUrl.hostname = userUrl.hostname.replace(/^admin\./, '')
         window.location.href = userUrl.toString()
         return
       }
     } catch (error) {
       console.error('Error checking admin access:', error)
       const userUrl = new URL('/dashboard', window.location.origin)
-      userUrl.hostname = userUrl.hostname.replace('admin.', '')
+      userUrl.hostname = userUrl.hostname.replace(/^admin\./, '')
       window.location.href = userUrl.toString()
     }
   }

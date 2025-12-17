@@ -19,8 +19,9 @@ export default function UserDropdown() {
 
   const handleSignOut = async () => {
     await signOut()
+    // Remove admin subdomain: admin.fincat.tinconnect.com -> fincat.tinconnect.com
     const signinUrl = new URL('/auth/signin', window.location.origin)
-    signinUrl.hostname = signinUrl.hostname.replace('admin.', '')
+    signinUrl.hostname = signinUrl.hostname.replace(/^admin\./, '')
     window.location.href = signinUrl.toString()
   }
 
@@ -57,3 +58,4 @@ export default function UserDropdown() {
     </DropdownMenu>
   )
 }
+

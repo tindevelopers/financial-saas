@@ -32,3 +32,4 @@ export default function TenantBreadcrumbs({ items }: { items: BreadcrumbItem[] }
     </nav>
   )
 }
+

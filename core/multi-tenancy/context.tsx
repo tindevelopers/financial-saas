@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import { createBrowserClient } from '@supabase/ssr'
 
-// Tenant type matching our Prisma schema
+// Tenant type matching our API response (dates are serialized as ISO strings)
 type Tenant = {
   id: string;
   name: string;
@@ -11,8 +11,8 @@ type Tenant = {
   status: string;
   plan: string | null;
   features: string[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string; // ISO string from API
+  updatedAt: string; // ISO string from API
 };
 
 interface TenantContextType {
