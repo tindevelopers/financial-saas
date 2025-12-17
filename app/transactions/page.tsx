@@ -149,22 +149,32 @@ export default function TransactionsPage() {
       "Date",
       "Description",
       "Payee/Payer",
+      "Reference",
       "Paid In",
       "Paid Out",
       "Amount",
       "Category",
+      "Confidence",
+      "AI Reasoning",
       "Status",
+      "Needs Review",
+      "Reviewed",
     ]
     
     const rows = filteredTransactions.map((t) => [
       new Date(t.date).toLocaleDateString("en-GB"),
       t.description,
       t.payerPayee || "",
+      (t as any).reference || "",
       t.paidIn || "",
       t.paidOut || "",
       t.amount,
       t.category?.name || "Uncategorized",
+      t.confidence ? `${Math.round(parseFloat(t.confidence) * 100)}%` : "",
+      (t as any).aiReasoning || "",
       t.status,
+      t.needsReview ? "Yes" : "No",
+      (t as any).isReviewed ? "Yes" : "No",
     ])
     
     const csvContent = [

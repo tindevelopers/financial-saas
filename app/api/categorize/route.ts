@@ -11,25 +11,53 @@ export async function POST(request: NextRequest) {
     
     const tenantId = user!.tenantId!
     const body = await request.json()
-    const { uploadId } = body
+    const { uploadId, customInstructions, batchNumber } = body
     
     if (!uploadId) {
       return NextResponse.json({ error: 'uploadId is required' }, { status: 400 })
     }
     
-    // Get transactions for this upload
+    // Get tenant settings for custom AI instructions
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+    })
+    
+    // Use custom instructions from request, tenant settings, or default
+    const aiInstructions = customInstructions || 
+      (tenant?.features?.includes('custom_ai_instructions') ? 
+        (tenant as any).aiInstructions : null) ||
+      'Analyze transaction descriptions carefully. Consider UK business context, common merchant names, and transaction patterns.'
+    
+    // Get ALL transactions for this upload (not just 100)
+    // Process in batches to avoid timeout, but get count first
+    const totalCount = await prisma.transaction.count({
+      where: {
+        tenantId,
+        uploadId,
+        status: 'pending',
+      },
+    })
+    
+    if (totalCount === 0) {
+      return NextResponse.json({ message: 'No transactions to categorize' })
+    }
+    
+    // Process in batches of 50 for better reliability
+    const batchSize = 50
+    const totalBatches = Math.ceil(totalCount / batchSize)
+    
+    console.log(`[CATEGORIZE] Processing ${totalCount} transactions in ${totalBatches} batches`)
+    
+    // Get first batch
     const transactions = await prisma.transaction.findMany({
       where: {
         tenantId,
         uploadId,
         status: 'pending',
       },
-      take: 100, // Process in batches
+      take: batchSize,
+      orderBy: { date: 'asc' },
     })
-    
-    if (transactions.length === 0) {
-      return NextResponse.json({ message: 'No transactions to categorize' })
-    }
     
     // Get categories for this tenant
     const categories = await prisma.category.findMany({
@@ -54,28 +82,42 @@ export async function POST(request: NextRequest) {
       reason: c.reason,
     }))
     
-    // Prepare categorization request
+    // Prepare categorization request with enhanced context
     const categorizationPrompt = `You are a UK financial transaction categorization expert. Your task is to categorize business transactions accurately into the provided categories.
 
 **Available Categories:**
 ${categories.map(c => `- ${c.name} (${c.type}): ${c.description || ''}`).join('\n')}
 
+**Custom Instructions:**
+${aiInstructions}
+
 **Learning from Past Corrections:**
 ${learningContext.length > 0 ? learningContext.map(lc => `"${lc.description}" was categorized as "${lc.category}" because: ${lc.reason || 'user correction'}`).join('\n') : 'No past corrections available yet.'}
 
-**Instructions:**
-1. Analyze each transaction's description, amount, and other details
-2. Choose the MOST APPROPRIATE category from the available categories
-3. Provide a confidence score (0.0 to 1.00):
-   - 0.90-1.00: Very confident (clear match)
-   - 0.70-0.89: Confident (likely correct)
-   - 0.50-0.69: Uncertain (needs review)
-   - Below 0.50: Very uncertain (definitely needs review)
-4. Provide brief reasoning for your choice
-5. If confidence < 0.80, the transaction will be flagged for manual review
+**Categorization Guidelines:**
+1. Analyze each transaction's description, amount, payer/payee, reference, and date
+2. Consider UK business context:
+   - Common UK merchants (Tesco, Sainsbury's, etc.)
+   - UK payment processors (Square, Stripe, PayPal)
+   - UK tax categories (VAT, Corporation Tax, etc.)
+   - Common business expense patterns
+3. If invoice information is available in metadata, use it to improve accuracy
+4. Choose the MOST APPROPRIATE category from the available categories
+5. Provide a confidence score (0.0 to 1.00):
+   - 0.90-1.00: Very confident (clear match, e.g., "Tesco" → "Office Expenses")
+   - 0.70-0.89: Confident (likely correct, e.g., "Square" → "Bank Charges")
+   - 0.50-0.69: Uncertain (needs review, ambiguous description)
+   - Below 0.50: Very uncertain (definitely needs review, no clear pattern)
+6. Provide brief reasoning for your choice
+7. If confidence < 0.80, the transaction will be flagged for manual review
+8. Consider transaction patterns: recurring amounts, merchant names, descriptions
 
 **Transactions to Categorize:**
-${transactions.map(t => `ID: ${t.id}, Date: ${t.date.toISOString().split('T')[0]}, Description: ${t.description}, Amount: £${t.amount}`).join('\n')}
+${transactions.map(t => {
+  const metadata = t.metadata as any || {}
+  const invoiceInfo = metadata.invoice ? `Invoice: ${metadata.invoice}` : ''
+  return `ID: ${t.id}, Date: ${t.date.toISOString().split('T')[0]}, Description: ${t.description}, Payer/Payee: ${t.payerPayee || 'N/A'}, Reference: ${t.reference || 'N/A'}, Amount: £${t.amount}${invoiceInfo ? `, ${invoiceInfo}` : ''}`
+}).join('\n')}
 
 **Return JSON format:**
 {
@@ -140,34 +182,53 @@ Respond with raw JSON only. Do not include code blocks, markdown, or any other f
               if (line.startsWith('data: ')) {
                 const data = line.slice(6)
                 if (data === '[DONE]') {
-                  // Parse final result and update database
+                    // Parse final result and update database
                   try {
                     const result = JSON.parse(buffer)
                     const categorizations = result?.categorizations || []
+                    
+                    let categorizedCount = 0
+                    let needsReviewCount = 0
                     
                     // Update transactions with AI categorization
                     for (const cat of categorizations) {
                       const category = categories.find(c => c.name === cat.categoryName)
                       if (category) {
+                        const confidence = parseFloat(cat.confidence) || 0
                         await prisma.transaction.update({
                           where: { id: cat.transactionId },
                           data: {
                             categoryId: category.id,
-                            confidence: cat.confidence?.toString() || '0',
-                            aiReasoning: cat.reasoning,
+                            confidence: confidence.toString(),
+                            aiReasoning: cat.reasoning || cat.reason || 'AI categorization',
                             status: 'categorized',
-                            needsReview: parseFloat(cat.confidence) < 0.80,
+                            needsReview: confidence < 0.80,
                           },
                         })
+                        categorizedCount++
+                        if (confidence < 0.80) needsReviewCount++
+                      } else {
+                        console.warn(`[CATEGORIZE] Category not found: ${cat.categoryName}`)
                       }
                     }
                     
+                    // Check if there are more transactions to process
+                    const remainingCount = await prisma.transaction.count({
+                      where: {
+                        tenantId,
+                        uploadId,
+                        status: 'pending',
+                      },
+                    })
+                    
                     // Send completion message
                     const finalData = JSON.stringify({
-                      status: 'completed',
+                      status: remainingCount > 0 ? 'batch_completed' : 'completed',
                       result: {
-                        categorized: categorizations.length,
-                        needsReview: categorizations.filter((c: any) => c.confidence < 0.80).length,
+                        categorized: categorizedCount,
+                        needsReview: needsReviewCount,
+                        remaining: remainingCount,
+                        batchNumber: batchNumber || 1,
                       },
                     })
                     controller.enqueue(encoder.encode(`data: ${finalData}\n\n`))
