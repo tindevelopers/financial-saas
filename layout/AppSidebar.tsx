@@ -474,6 +474,27 @@ function ensureString(value: any): string {
     }
   }
   
+  // CRITICAL: Ensure we return a primitive string, not a String object
+  // Check if result is a String object (not primitive)
+  if (result instanceof String) {
+    console.error('[ensureString] CRITICAL: Result is a String object, not primitive!', {
+      resultType: typeof result,
+      resultValue: result,
+      resultConstructor: result.constructor?.name,
+    })
+    // Convert String object to primitive
+    result = String(result)
+  }
+  
+  // Final check: ensure it's a primitive string
+  if (typeof result !== 'string') {
+    console.error('[ensureString] CRITICAL: Final check failed - result is still not a string!', {
+      resultType: typeof result,
+      resultValue: result,
+    })
+    result = ''
+  }
+  
   // Return primitive string (not object wrapper)
   return result as string
 }
