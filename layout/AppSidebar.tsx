@@ -444,7 +444,19 @@ const AppSidebar: React.FC = () => {
                 {nav.icon}
               </span>
               {(isExpanded || isHovered || isMobileOpen) && (
-                <span className={`menu-item-text`}>{nav.name}</span>
+                <span className={`menu-item-text`}>
+                  {(() => {
+                    const navName = nav.name
+                    if (typeof navName !== 'string') {
+                      console.error('[AppSidebar] nav.name is not a string!', {
+                        navNameType: typeof navName,
+                        navNameValue: navName,
+                        nav: nav,
+                      })
+                    }
+                    return typeof navName === 'string' ? navName : String(navName || '')
+                  })()}
+                </span>
               )}
               {nav.new && (isExpanded || isHovered || isMobileOpen) && (
                 <span
@@ -487,7 +499,19 @@ const AppSidebar: React.FC = () => {
                   {nav.icon}
                 </span>
                 {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className={`menu-item-text`}>{nav.name}</span>
+                  <span className={`menu-item-text`}>
+                    {(() => {
+                      const navName = nav.name
+                      if (typeof navName !== 'string') {
+                        console.error('[AppSidebar] nav.name is not a string!', {
+                          navNameType: typeof navName,
+                          navNameValue: navName,
+                          nav: nav,
+                        })
+                      }
+                      return typeof navName === 'string' ? navName : String(navName || '')
+                    })()}
+                  </span>
                 )}
               </Link>
             )
@@ -523,7 +547,19 @@ const AppSidebar: React.FC = () => {
                           onClick={() => handleSubmenuToggle(index, menuType, subIndex)}
                           className="menu-dropdown-item w-full text-left flex items-center justify-between"
                         >
-                          <span>{subItem.name}</span>
+                          <span>
+                            {(() => {
+                              const subItemName = subItem.name
+                              if (typeof subItemName !== 'string') {
+                                console.error('[AppSidebar] subItem.name is not a string!', {
+                                  subItemNameType: typeof subItemName,
+                                  subItemNameValue: subItemName,
+                                  subItem: subItem,
+                                })
+                              }
+                              return typeof subItemName === 'string' ? subItemName : String(subItemName || '')
+                            })()}
+                          </span>
                           <ChevronDownIcon
                             className={`w-4 h-4 transition-transform duration-200 ${
                               isNestedOpen ? "rotate-180" : ""
@@ -545,7 +581,17 @@ const AppSidebar: React.FC = () => {
                                           : "menu-dropdown-item-inactive"
                                       }`}
                                     >
-                                      {nestedItem.name}
+                                      {(() => {
+                                        const nestedItemName = nestedItem.name
+                                        if (typeof nestedItemName !== 'string') {
+                                          console.error('[AppSidebar] nestedItem.name is not a string!', {
+                                            nestedItemNameType: typeof nestedItemName,
+                                            nestedItemNameValue: nestedItemName,
+                                            nestedItem: nestedItem,
+                                          })
+                                        }
+                                        return typeof nestedItemName === 'string' ? nestedItemName : String(nestedItemName || '')
+                                      })()}
                                     </Link>
                                   </li>
                                 );
@@ -571,7 +617,17 @@ const AppSidebar: React.FC = () => {
                               : "menu-dropdown-item-inactive"
                           }`}
                         >
-                          {subItem.name}
+                          {(() => {
+                            const subItemName = subItem.name
+                            if (typeof subItemName !== 'string') {
+                              console.error('[AppSidebar] subItem.name is not a string!', {
+                                subItemNameType: typeof subItemName,
+                                subItemNameValue: subItemName,
+                                subItem: subItem,
+                              })
+                            }
+                            return typeof subItemName === 'string' ? subItemName : String(subItemName || '')
+                          })()}
                           <span className="flex items-center gap-1 ml-auto">
                             {subItem.new && (
                               <span
@@ -767,7 +823,16 @@ const AppSidebar: React.FC = () => {
                   Workspace
                 </p>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                  {tenant.name}
+                  {(() => {
+                    const tenantName = tenant.name
+                    console.log('[AppSidebar] Rendering tenant.name:', {
+                      tenantNameType: typeof tenantName,
+                      tenantNameValue: tenantName,
+                      tenantNameIsString: typeof tenantName === 'string',
+                      tenant: tenant,
+                    })
+                    return typeof tenantName === 'string' ? tenantName : String(tenantName || '')
+                  })()}
                 </p>
               </div>
             ) : !isTenantLoading && !tenant ? (
