@@ -9,6 +9,8 @@ const nextConfig = {
   generateBuildId: async () => {
     return 'build-' + Date.now()
   },
+  // Ensure Next.js only resolves routes from app directory, not node_modules
+  pageExtensions: ['ts', 'tsx', 'js', 'jsx'],
 }
 
 module.exports = nextConfig

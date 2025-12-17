@@ -38,6 +38,7 @@
   ],
   "exclude": [
     "node_modules",
-    "scripts"
+    "scripts",
+    "node_modules/@tindeveloper/tinadmin-saas-base/src/app"
   ]
 }
