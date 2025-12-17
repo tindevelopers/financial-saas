@@ -778,10 +778,11 @@ const AppSidebar: React.FC = () => {
                             
                             // Final safety check - ensure it's a primitive string
                             if (typeof safeName !== 'string') {
+                              const safeNameAny = safeName as any
                               console.error('[AppSidebar] CRITICAL: safeName is still not a string after conversion!', {
                                 safeNameType: typeof safeName,
                                 safeNameValue: safeName,
-                                safeNameConstructor: safeName?.constructor?.name,
+                                safeNameConstructor: safeNameAny?.constructor?.name,
                               })
                               safeName = '' // Force to empty string
                             }
@@ -806,10 +807,11 @@ const AppSidebar: React.FC = () => {
                             
                             // Final safety check - return empty string if still not a string
                             if (typeof finalName !== 'string') {
+                              const finalNameAny = finalName as any
                               console.error('[AppSidebar] CRITICAL ERROR: finalName is still not a string!', {
                                 finalNameType: typeof finalName,
                                 finalNameValue: finalName,
-                                finalNameConstructor: finalName?.constructor?.name,
+                                finalNameConstructor: finalNameAny?.constructor?.name,
                               })
                               return '' // Return empty string as absolute fallback
                             }
