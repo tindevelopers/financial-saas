@@ -92,7 +92,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
             domain: tenantData.domain ? String(tenantData.domain) : null,
             status: String(tenantData.status || 'active'),
             plan: tenantData.plan ? String(tenantData.plan) : null,
-            features: Array.isArray(tenantData.features) ? tenantData.features.map(f => String(f)) : [],
+            features: Array.isArray(tenantData.features) ? tenantData.features.map((f: any) => String(f)) : [],
             createdAt: typeof tenantData.createdAt === 'string' ? tenantData.createdAt : new Date(tenantData.createdAt || Date.now()).toISOString(),
             updatedAt: typeof tenantData.updatedAt === 'string' ? tenantData.updatedAt : new Date(tenantData.updatedAt || Date.now()).toISOString(),
           }
