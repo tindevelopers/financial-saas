@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { Toaster } from '@/components/ui/toaster'
+import { ErrorBoundary } from '@/components/error-boundary'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -26,10 +27,12 @@ export default function RootLayout({
         <script src="https://apps.abacus.ai/chatllm/appllm-lib.js"></script>
       </head>
       <body className={inter.className}>
-        <Providers>
-          {children}
-          <Toaster />
-        </Providers>
+        <ErrorBoundary>
+          <Providers>
+            {children}
+            <Toaster />
+          </Providers>
+        </ErrorBoundary>
       </body>
     </html>
   )

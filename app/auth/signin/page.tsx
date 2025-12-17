@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { createSupabaseClient } from "@/lib/supabase-client"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -19,21 +19,69 @@ export default function SignInPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
+  // Log component mount and render
+  useEffect(() => {
+    console.log('[SignInPage] Component mounted')
+    console.log('[SignInPage] Initial state:', {
+      email: typeof email,
+      password: typeof password,
+      error: typeof error,
+      loading: typeof loading,
+    })
+    
+    return () => {
+      console.log('[SignInPage] Component unmounting')
+    }
+  }, [])
+
+  // Log state changes
+  useEffect(() => {
+    console.log('[SignInPage] State changed:', {
+      email: email ? `${email.substring(0, 3)}***` : 'empty',
+      password: password ? '***' : 'empty',
+      error: error ? `Error: ${error.substring(0, 50)}` : 'none',
+      loading,
+    })
+  }, [email, password, error, loading])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('[SignInPage] Form submitted')
     setError("")
     setLoading(true)
 
     try {
+      console.log('[SignInPage] Creating Supabase client...')
       const supabase = createSupabaseClient()
+      console.log('[SignInPage] Supabase client created, signing in...')
+      
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
+      console.log('[SignInPage] Sign in response:', {
+        hasData: !!data,
+        hasUser: !!data?.user,
+        userType: typeof data?.user,
+        userKeys: data?.user ? Object.keys(data.user) : [],
+        error: signInError ? {
+          message: signInError.message,
+          status: signInError.status,
+        } : null,
+      })
+
       if (signInError) {
-        setError(signInError.message || "Invalid email or password")
+        console.error('[SignInPage] Sign in error:', signInError)
+        const errorMessage = signInError.message || "Invalid email or password"
+        console.log('[SignInPage] Setting error message:', typeof errorMessage, errorMessage)
+        setError(errorMessage)
       } else if (data.user) {
+        console.log('[SignInPage] User signed in successfully:', {
+          userId: data.user.id,
+          email: data.user.email,
+          userType: typeof data.user,
+        })
         // Check if user is admin and redirect accordingly
         try {
           const checkResponse = await fetch("/api/admin/check-access", {
@@ -96,7 +144,18 @@ export default function SignInPage() {
             {error && (
               <div className="flex items-center gap-2 p-3 text-sm text-red-800 bg-red-50 rounded-md">
                 <AlertCircle className="h-4 w-4" />
-                <p>{error}</p>
+                <p>{(() => {
+                  // Log what we're rendering
+                  console.log('[SignInPage] Rendering error:', {
+                    errorType: typeof error,
+                    errorValue: error,
+                    isString: typeof error === 'string',
+                    isObject: typeof error === 'object',
+                    errorStringified: typeof error === 'object' ? JSON.stringify(error) : error,
+                  })
+                  // Ensure error is always a string
+                  return typeof error === 'string' ? error : String(error)
+                })()}</p>
               </div>
             )}
             <div className="space-y-2">
