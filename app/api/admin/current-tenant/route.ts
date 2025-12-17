@@ -27,11 +27,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(null)
     }
 
-    // Serialize Date objects to ISO strings to prevent React rendering errors
+    // Serialize Date objects to ISO strings and ensure all fields are properly serialized
+    // This prevents React Error #130 (Objects are not valid as a React child)
     return NextResponse.json({
-      ...tenant,
-      createdAt: tenant.createdAt.toISOString(),
-      updatedAt: tenant.updatedAt.toISOString(),
+      id: tenant.id,
+      name: tenant.name,
+      domain: tenant.domain,
+      status: tenant.status,
+      plan: tenant.plan,
+      features: Array.isArray(tenant.features) ? tenant.features : [],
+      createdAt: tenant.createdAt instanceof Date ? tenant.createdAt.toISOString() : tenant.createdAt,
+      updatedAt: tenant.updatedAt instanceof Date ? tenant.updatedAt.toISOString() : tenant.updatedAt,
     })
   } catch (error: any) {
     console.error('Get current tenant error:', error)

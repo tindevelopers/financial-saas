@@ -72,7 +72,24 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       
       if (response.ok) {
         const tenantData = await response.json()
-        setTenant(tenantData)
+        // Ensure tenantData is either null or a valid tenant object
+        // Platform Admins may not have a tenant, so null is valid
+        if (tenantData && typeof tenantData === 'object' && tenantData.id) {
+          // Ensure all fields are serialized properly
+          setTenant({
+            id: tenantData.id,
+            name: tenantData.name || '',
+            domain: tenantData.domain || null,
+            status: tenantData.status || 'active',
+            plan: tenantData.plan || null,
+            features: Array.isArray(tenantData.features) ? tenantData.features : [],
+            createdAt: typeof tenantData.createdAt === 'string' ? tenantData.createdAt : new Date(tenantData.createdAt || Date.now()).toISOString(),
+            updatedAt: typeof tenantData.updatedAt === 'string' ? tenantData.updatedAt : new Date(tenantData.updatedAt || Date.now()).toISOString(),
+          })
+        } else {
+          // null response is valid for Platform Admins
+          setTenant(null)
+        }
       } else {
         setTenant(null)
       }
