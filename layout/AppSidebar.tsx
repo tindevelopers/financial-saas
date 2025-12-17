@@ -403,50 +403,79 @@ const supportItems: NavItem[] = [
 // Helper function to absolutely guarantee a primitive string
 // This function will NEVER return an object - only primitive strings
 function ensureString(value: any): string {
+  let result: string
+  
   // Handle null/undefined
   if (value === null || value === undefined) {
-    return ''
+    result = ''
   }
-  
   // If already a primitive string, return it
-  if (typeof value === 'string') {
-    return value
+  else if (typeof value === 'string') {
+    result = value
   }
-  
   // If it's a number or boolean, convert to string
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return String(value)
+  else if (typeof value === 'number' || typeof value === 'boolean') {
+    result = String(value)
   }
-  
   // If it's an object, try to extract a string
-  if (typeof value === 'object') {
+  else if (typeof value === 'object') {
     // Try common object properties
-    if (typeof value.name === 'string') return value.name
-    if (typeof value.value === 'string') return value.value
-    if (typeof value.text === 'string') return value.text
-    if (typeof value.label === 'string') return value.label
-    if (typeof value.toString === 'function') {
+    if (typeof value.name === 'string') {
+      result = value.name
+    } else if (typeof value.value === 'string') {
+      result = value.value
+    } else if (typeof value.text === 'string') {
+      result = value.text
+    } else if (typeof value.label === 'string') {
+      result = value.label
+    } else if (typeof value.toString === 'function') {
       try {
         const str = value.toString()
-        if (typeof str === 'string') return str
+        result = typeof str === 'string' ? str : String(str)
       } catch (e) {
-        // toString failed, continue
+        // toString failed, use JSON.stringify
+        try {
+          result = JSON.stringify(value).substring(0, 100)
+        } catch (e2) {
+          result = '[Object]'
+        }
+      }
+    } else {
+      // Last resort: JSON.stringify
+      try {
+        result = JSON.stringify(value).substring(0, 100)
+      } catch (e) {
+        result = '[Object]'
       }
     }
-    // Last resort: JSON.stringify
+  }
+  // Fallback: convert to string
+  else {
     try {
-      return JSON.stringify(value).substring(0, 100)
+      result = String(value)
     } catch (e) {
-      return '[Object]'
+      result = ''
     }
   }
   
-  // Fallback: convert to string
-  try {
-    return String(value)
-  } catch (e) {
-    return ''
+  // CRITICAL: Final runtime check - ensure result is actually a primitive string
+  if (typeof result !== 'string') {
+    console.error('[ensureString] CRITICAL: Result is not a string!', {
+      resultType: typeof result,
+      resultValue: result,
+      originalValue: value,
+      originalType: typeof value,
+    })
+    // Force to string using JSON.stringify as last resort
+    try {
+      result = JSON.stringify(result).substring(0, 100)
+    } catch (e) {
+      result = ''
+    }
   }
+  
+  // Return primitive string (not object wrapper)
+  return result as string
 }
 
 const AppSidebar: React.FC = () => {
