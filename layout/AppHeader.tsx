@@ -16,8 +16,19 @@ const AppHeader: React.FC = () => {
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
   const { branding } = useWhiteLabel();
   
-  const logoUrl = branding.logo || "/images/logo/logo.svg";
-  const logoDarkUrl = branding.logo || "/images/logo/logo-dark.svg";
+  // Log branding to check for objects
+  React.useEffect(() => {
+    console.log('[AppHeader] Branding:', {
+      brandingType: typeof branding,
+      brandingKeys: branding ? Object.keys(branding) : [],
+      branding: branding,
+      logoType: typeof branding?.logo,
+      logoValue: branding?.logo,
+    })
+  }, [branding])
+  
+  const logoUrl = branding?.logo || "/images/logo/logo.svg";
+  const logoDarkUrl = branding?.logo || "/images/logo/logo-dark.svg";
 
   const handleToggle = () => {
     if (window.innerWidth >= 1280) {

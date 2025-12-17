@@ -7,6 +7,18 @@ import React from "react";
 export default function DashboardPage() {
   const { tenant, isLoading } = useTenant();
 
+  // Log tenant to check for rendering issues
+  React.useEffect(() => {
+    console.log('[DashboardPage] Tenant:', {
+      tenantType: typeof tenant,
+      tenant: tenant,
+      tenantKeys: tenant ? Object.keys(tenant) : [],
+      nameType: typeof tenant?.name,
+      nameValue: tenant?.name,
+      isLoading,
+    })
+  }, [tenant, isLoading])
+
   return (
     <div className="space-y-6">
       {/* Breadcrumbs */}
@@ -25,13 +37,32 @@ export default function DashboardPage() {
           </div>
           <div className="relative space-y-4">
             <h1 className="text-4xl font-semibold leading-tight lg:text-5xl">
-              Welcome{tenant ? ` to ${tenant.name}` : ""}
+              Welcome{(() => {
+                if (!tenant) return ""
+                const tenantName = tenant.name
+                console.log('[DashboardPage] Rendering tenant name in h1:', {
+                  tenantNameType: typeof tenantName,
+                  tenantNameValue: tenantName,
+                  isString: typeof tenantName === 'string',
+                })
+                const safeName = typeof tenantName === 'string' ? tenantName : String(tenantName || '')
+                return ` to ${safeName}`
+              })()}
             </h1>
             <p className="max-w-2xl text-white/70">
               {isLoading 
                 ? "Loading..." 
                 : tenant 
-                  ? `Manage your ${tenant.name} workspace from this dashboard.`
+                  ? (() => {
+                      const tenantName = tenant.name
+                      console.log('[DashboardPage] Rendering tenant name in p:', {
+                        tenantNameType: typeof tenantName,
+                        tenantNameValue: tenantName,
+                        isString: typeof tenantName === 'string',
+                      })
+                      const safeName = typeof tenantName === 'string' ? tenantName : String(tenantName || '')
+                      return `Manage your ${safeName} workspace from this dashboard.`
+                    })()
                   : "Get started by creating or selecting a tenant."}
             </p>
           </div>

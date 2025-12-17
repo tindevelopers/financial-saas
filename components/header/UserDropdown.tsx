@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { useSupabaseAuth } from "@/hooks/use-supabase-auth"
 import { User, LogOut } from "lucide-react"
 import {
@@ -16,6 +17,17 @@ import { useRouter } from "next/navigation"
 export default function UserDropdown() {
   const { user, signOut } = useSupabaseAuth()
   const router = useRouter()
+
+  // Log user object to check for rendering issues
+  React.useEffect(() => {
+    console.log('[UserDropdown] User object:', {
+      userType: typeof user,
+      user: user,
+      userKeys: user ? Object.keys(user) : [],
+      emailType: typeof user?.email,
+      emailValue: user?.email,
+    })
+  }, [user])
 
   const handleSignOut = async () => {
     await signOut()
@@ -45,8 +57,28 @@ export default function UserDropdown() {
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user?.email?.split('@')[0]}</p>
-            <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+            <p className="text-sm font-medium leading-none">
+              {(() => {
+                const emailPrefix = user?.email?.split('@')[0]
+                console.log('[UserDropdown] Rendering email prefix:', {
+                  emailPrefixType: typeof emailPrefix,
+                  emailPrefixValue: emailPrefix,
+                  isString: typeof emailPrefix === 'string',
+                })
+                return typeof emailPrefix === 'string' ? emailPrefix : String(emailPrefix || 'User')
+              })()}
+            </p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {(() => {
+                const email = user?.email
+                console.log('[UserDropdown] Rendering email:', {
+                  emailType: typeof email,
+                  emailValue: email,
+                  isString: typeof email === 'string',
+                })
+                return typeof email === 'string' ? email : String(email || '')
+              })()}
+            </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
